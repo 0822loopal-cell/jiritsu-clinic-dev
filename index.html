@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>自律調整院｜施設管理アプリ（開発版）</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#253c44;background:#f5f8f7}
+*{box-sizing:border-box}body{margin:0}header{background:white;border-bottom:1px solid #dbe6e3;padding:22px max(20px,calc((100vw - 1080px)/2))}
+h1{font-size:1.4rem;margin:0}header p{margin:6px 0 0;color:#647b7e;font-size:.85rem}
+main{max-width:1080px;margin:28px auto;padding:0 20px}.notice{border:1px solid #b9d7ce;background:#eaf5f1;border-radius:12px;padding:16px 20px;line-height:1.8}
+h2{font-size:1.15rem;margin:28px 0 15px}.panel{background:white;border:1px solid #dce7e4;border-radius:14px;padding:22px;margin-bottom:18px}
+.search{display:block;width:100%;margin:12px 0 16px;border:1px solid #cbdad6;border-radius:9px;padding:13px;font:inherit;background:#f7faf9}
+button{font:inherit;border:1px solid #cbdad6;border-radius:9px;padding:12px 16px;background:#f1f5f4;color:#718482;cursor:not-allowed}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.card{padding:18px;border:1px solid #e1eae7;border-radius:11px;background:#fbfdfc}
+.card strong{display:block;margin-bottom:9px}.card span{font-size:.85rem;color:#6b7e7c;line-height:1.7}
+small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px;color:#708381;font-size:.8rem}
+</style>
+</head>
+<body>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.1.0｜HOME画面</p></header>
+<main>
+<div class="notice"><strong>画面構成の確認版です。</strong><br>クライアント情報の登録・検索・保存は未実装です。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
+<h2>HOME｜クライアント管理</h2>
+<section class="panel">
+<label for="client-search"><strong>クライアント検索</strong></label>
+<input id="client-search" class="search" type="search" placeholder="クライアントNO・氏名で検索（未実装）" disabled>
+<button type="button" disabled>＋ 新規クライアント登録（未実装）</button>
+<p><small>クライアント一覧は、登録・保護機能の実装後に表示します。</small></p>
+</section>
+<h2>クライアント個別画面｜予定する機能</h2>
+<section class="cards" aria-label="個別画面の機能一覧">
+<div class="card"><strong>概要</strong><span>基本情報・生活目標・直近の支援状況</span></div>
+<div class="card"><strong>ヒアリング</strong><span>初回・追加ヒアリング</span></div>
+<div class="card"><strong>評価・測定</strong><span>4領域評価と必要に応じた機器測定</span></div>
+<div class="card"><strong>施術</strong><span>セッションごとの施術記録</span></div>
+<div class="card"><strong>セルフケア</strong><span>提供メニュー・個別条件・変更履歴</span></div>
+<div class="card"><strong>生活・週間記録</strong><span>週間サマリーの取り込み・確認</span></div>
+<div class="card"><strong>経過・再評価</strong><span>生活目標・変化・次の支援方針</span></div>
+</section>
+<h2>共通管理｜予定する機能</h2>
+<section class="cards" aria-label="共通管理機能一覧">
+<div class="card"><strong>セルフケアライブラリ</strong><span>A〜F・29候補の管理</span></div>
+<div class="card"><strong>バックアップ・復元</strong><span>暗号化ファイルによる手動運用</span></div>
+<div class="card"><strong>アプリ設定</strong><span>保存・バージョン情報</span></div>
+</section>
+</main>
+<footer>自律調整院｜施設用アプリ開発環境　※ この版は画面表示のみで、データ保存処理はありません。</footer>
+</body>
+</html>
