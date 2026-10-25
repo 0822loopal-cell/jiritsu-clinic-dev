@@ -1,18 +1,18 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>バックアップ・復元テスト｜自律調整院</title>
 <style>*{box-sizing:border-box}body{font-family:system-ui,"Noto Sans JP",sans-serif;max-width:740px;margin:30px auto;padding:0 18px;background:#f5f8f7;color:#253d43;line-height:1.75}section{background:white;border:1px solid #d6e5df;border-radius:12px;padding:20px;margin:16px 0}h1{font-size:1.5rem}h2{font-size:1.1rem}button,input{font:inherit}button{padding:10px 14px;border-radius:8px;border:1px solid #9dc5b5;background:#e5f3eb;color:#1e5143;cursor:pointer;margin:5px 5px 5px 0}button{transition:background-color .14s ease,transform .1s ease,box-shadow .14s ease;touch-action:manipulation}button:not(:disabled):hover{background:#c6e5d6;box-shadow:0 2px 6px #1e514322}button:not(:disabled):active{background:#91c9b0;transform:translateY(2px) scale(.985);box-shadow:inset 0 2px 4px #1e514333}button:focus-visible{outline:3px solid #287f69;outline-offset:2px}button:disabled{opacity:.5;cursor:not-allowed}button.is-busy{opacity:1;background:#b9d9cc;color:#184d3f;cursor:progress}button.just-clicked:not(:disabled){background:#a7d9c2;box-shadow:inset 0 1px 4px #1e514333}@media(prefers-reduced-motion:reduce){button{transition:none}}input[type=password],input[type=file]{display:block;width:100%;max-width:560px;padding:10px;border:1px solid #c7d9d2;border-radius:8px}label{font-weight:600;display:block;margin:10px 0 5px}.status{white-space:pre-wrap;background:#edf4f0;border-radius:8px;padding:12px;min-height:60px}small{color:#596e6a}a{color:#246451}</style></head><body>
-<h1>暗号化バックアップ・復元テスト</h1><p>STEP 152-C｜独立した架空データ検証ページ（障害・復旧テスト版 Ver.0.1.5）</p>
+<h1>暗号化バックアップ・復元テスト</h1><p>STEP 152-C｜独立した架空データ検証ページ（データ保護検証版 Ver.0.1.6）</p>
 <section><strong>実際のクライアント情報や普段のパスワードは使用しないでください。</strong><p>固定の架空データ「NO 0001／テスト専用」のみ扱います。バックアップファイルはブラウザから手動で保存します。</p></section>
 <section><h2>① テスト用データを作成</h2><button id="make" disabled>架空データをブラウザ内に保存</button><button id="check" disabled>現在の保存データを確認</button><button id="clear" disabled>ブラウザ内のテストデータを削除</button></section>
 <section><h2>② 暗号化バックアップを書き出す</h2><label for="exportPass">バックアップ専用パスフレーズ（12文字以上）</label><input id="exportPass" type="password" autocomplete="off" minlength="12"><button id="export" disabled>暗号化バックアップを作成・保存</button><p><small>このパスフレーズはバックアップの復元に必要です。テスト専用の文字列を使ってください。</small></p></section>
 <section><h2>③ ファイルから復元</h2><label for="importFile">保存したバックアップファイル（.json）</label><input id="importFile" type="file" accept=".json,application/json"><label for="importPass">バックアップ作成時のパスフレーズ</label><input id="importPass" type="password" autocomplete="off"><button id="restore" disabled>ファイルを検証して復元</button><p><small>復元時に同じテストデータが残っている場合は、上書き前に確認します。</small></p></section>
 <section><h2>④ STEP 152-D｜破損ファイルの検証</h2><p>実際のバックアップファイルは変更しません。検証専用の破損ファイルを別途作成します。</p><button id="makeBroken" disabled>破損テスト用ファイルを作成・保存</button><p><small>このファイルは復元できないことを確認するための架空テスト専用ファイルです。</small></p></section>
-<section><h2>確認結果</h2><div id="status" class="status" role="status" aria-live="polite">初期化中…</div></section><p><a href="./">← HOMEへ戻る</a></p>
+<section><h2>⑤ STEP 152-D｜復元失敗前後のデータ比較</h2><p>現在の保存データを基準として記録し、破損ファイルの復元失敗後に内容が一致するか検証します。</p><button id="snapshot" disabled>現在のデータを比較基準として記録</button><button id="compare" disabled>比較基準と現在のデータを照合</button><p><small>比較基準はこのページを開いている間だけ保持します。データの保存・変更は行いません。</small></p></section><section><h2>確認結果</h2><div id="status" class="status" role="status" aria-live="polite">初期化中…</div></section><p><a href="./">← HOMEへ戻る</a></p>
 <script>
 "use strict";
 const DB="jiritsu-clinic-backup-test-v1",STORE="records",ID="demo";
 const status=document.getElementById("status"),ep=document.getElementById("exportPass"),ip=document.getElementById("importPass"),file=document.getElementById("importFile");
-const btns=["make","check","clear","export","restore","makeBroken"].map(id=>document.getElementById(id));
+const btns=["make","check","clear","export","restore","makeBroken","snapshot","compare"].map(id=>document.getElementById(id));
 const enc=new TextEncoder(),dec=new TextDecoder();let db;
 function say(s){status.textContent=s;}
 window.addEventListener("error",e=>say("画面エラー："+e.message));
@@ -37,6 +37,9 @@ document.getElementById("makeBroken").onclick=()=>{
   a.href=url;a.download="jiritsu-backup-BROKEN-TEST.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
   say("破損テスト用ファイルのダウンロードを開始しました。\\n元の正常なバックアップファイルは変更されていません。");
 };
+let baseline=null;
+document.getElementById("snapshot").onclick=async()=>{try{const record=await request("readonly",store=>store.get(ID));if(!record){say("比較基準を記録できません：保存データがありません。");return;}baseline=JSON.stringify(record);say("比較基準を記録しました：NO "+record.clientNo+"／"+record.label+"\\n保存日時："+record.savedAt);}catch(e){say("比較基準の記録に失敗："+e.message);}};
+document.getElementById("compare").onclick=async()=>{if(baseline===null){say("先に「現在のデータを比較基準として記録」を押してください。");return;}try{const record=await request("readonly",store=>store.get(ID));say(record&&JSON.stringify(record)===baseline?"照合成功：比較基準と現在の保存データは完全に一致しています。":"照合不一致：比較基準と現在の保存データが異なります。");}catch(e){say("照合失敗："+e.message);}};
 document.getElementById("make").addEventListener("pointerdown",()=>{say("保存ボタンの操作を検知しました。");});
 setup();
 </script></body></html>
