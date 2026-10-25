@@ -17,11 +17,28 @@ button{font:inherit;border:1px solid #cbdad6;border-radius:9px;padding:12px 16px
 .card{padding:18px;border:1px solid #e1eae7;border-radius:11px;background:#fbfdfc}
 .card strong{display:block;margin-bottom:9px}.card span{font-size:.85rem;color:#6b7e7c;line-height:1.7}
 small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px;color:#708381;font-size:.8rem}
+
+.lockpanel{background:#fff;border:1px solid #c9ddd6;border-radius:14px;padding:22px;margin-bottom:20px}
+.lockpanel label{display:block;font-weight:600;margin:12px 0 5px}
+.lockpanel input{display:block;width:100%;max-width:430px;font:inherit;padding:12px;border:1px solid #bdcfca;border-radius:8px}
+.lockpanel button{cursor:pointer;background:#e5f2ec;color:#204b42;border-color:#b6d3c8}
+.lockpanel button:disabled{opacity:.5;cursor:not-allowed}
+.lockpanel .status{white-space:pre-wrap;margin-top:12px;background:#f0f6f3;padding:12px;border-radius:8px}
+#home-content[hidden],#lock-panel[hidden]{display:none!important}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.1.0｜HOME画面</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.2.0｜HOME・ロック検証</p></header>
 <main>
+<section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
+<h2 id="lock-title">アプリロック</h2>
+<p>検証専用です。普段使うパスワードや実際のクライアント情報は入力しないでください。</p>
+<label for="lock-pass">テスト専用パスフレーズ（12文字以上）</label>
+<input id="lock-pass" type="password" autocomplete="off" minlength="12">
+<div><button id="lock-action" type="button" disabled>準備中</button></div>
+<p id="lock-status" class="status" role="status" aria-live="polite">初期化中…</p>
+</section>
+<div id="home-content" hidden>
 <div class="notice"><strong>画面構成の確認版です。</strong><br>クライアント情報の登録・検索・保存は未実装です。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
 <h2>HOME｜クライアント管理</h2>
 <section class="panel">
@@ -46,7 +63,58 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <div class="card"><strong>バックアップ・復元</strong><span>暗号化ファイルによる手動運用</span></div>
 <div class="card"><strong>アプリ設定</strong><span>保存・バージョン情報</span></div>
 </section>
+<section class="panel"><strong>ロック動作の確認</strong><p>HOME表示中にロックすると、画面が非表示になります。</p><button id="relock" type="button" style="cursor:pointer;color:#204b42;background:#e5f2ec">ロックする</button></section>
+</div>
 </main>
-<footer>自律調整院｜施設用アプリ開発環境　※ この版は画面表示のみで、データ保存処理はありません。</footer>
-</body>
+<footer>自律調整院｜施設用アプリ開発環境　※ ロック検証専用。クライアント情報の保存処理はありません。</footer>
+<script>
+"use strict";
+const DB_NAME="jiritsu-clinic-home-lock-test-v1",STORE_NAME="settings",RECORD="lockVerifier";
+const lockPanel=document.getElementById("lock-panel"),home=document.getElementById("home-content");
+const pass=document.getElementById("lock-pass"),action=document.getElementById("lock-action");
+const title=document.getElementById("lock-title"),status=document.getElementById("lock-status");
+const enc=new TextEncoder(),dec=new TextDecoder();
+let db,configured=false,unlocked=false;
+const b64=b=>btoa(Array.from(b,n=>String.fromCharCode(n)).join(""));
+const un64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+function setStatus(s){status.textContent=s;}
+function showLocked(){unlocked=false;pass.value="";home.hidden=true;lockPanel.hidden=false;action.textContent=configured?"ロックを解除":"テスト用パスフレーズを設定";title.textContent=configured?"アプリのロック解除":"テスト用パスフレーズの初期設定";setStatus(configured?"ロック中です。テスト用パスフレーズを入力してください。":"初回設定です。テスト用パスフレーズを12文字以上入力してください。");}
+function showUnlocked(){unlocked=true;pass.value="";lockPanel.hidden=true;home.hidden=false;}
+async function keyFor(p,salt){const base=await crypto.subtle.importKey("raw",enc.encode(p),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
+function store(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,mode),r=fn(tx.objectStore(STORE_NAME));let val;r.onsuccess=()=>val=r.result;tx.oncomplete=()=>resolve(val);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
+async function init(){
+lockPanel.hidden=false;home.hidden=true;
+if(!indexedDB||!crypto?.subtle){setStatus("このブラウザは必要な保存・暗号化機能に対応していません。");return;}
+try{
+db=await new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE_NAME))r.result.createObjectStore(STORE_NAME);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+configured=!!(await store("readonly",s=>s.get(RECORD)));
+action.disabled=false;showLocked();
+}catch(e){setStatus("初期化失敗："+e.message);}
+}
+action.onclick=async()=>{
+const p=pass.value;
+if(p.length<12){setStatus("パスフレーズは12文字以上入力してください。");return;}
+action.disabled=true;
+try{
+if(!configured){
+const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+const key=await keyFor(p,salt);
+const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode("JIRITSU-LOCK-TEST-V1"));
+await store("readwrite",s=>s.put({version:1,salt:b64(salt),iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))},RECORD));
+configured=true;showUnlocked();
+}else{
+const record=await store("readonly",s=>s.get(RECORD));
+if(!record||record.version!==1)throw new Error("ロック設定が見つからないか未対応の形式です。");
+const key=await keyFor(p,un64(record.salt));
+const bytes=await crypto.subtle.decrypt({name:"AES-GCM",iv:un64(record.iv)},key,un64(record.ciphertext));
+if(dec.decode(bytes)!=="JIRITSU-LOCK-TEST-V1")throw new Error("検証データが一致しません。");
+showUnlocked();
+}
+}catch(e){setStatus(e.name==="OperationError"?"解除できません。パスフレーズが違うか、設定データが破損しています。":"操作失敗："+e.message);pass.value="";}
+finally{action.disabled=false;}
+};
+document.getElementById("relock").onclick=()=>showLocked();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&unlocked)showLocked();});
+init();
+</script></body>
 </html>
