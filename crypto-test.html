@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>暗号化テスト｜自律調整院</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,"Noto Sans JP",sans-serif;background:#f5f8f7;color:#243d42;max-width:750px;margin:30px auto;padding:0 18px;line-height:1.7}section{background:white;border:1px solid #d9e6e2;border-radius:13px;padding:20px;margin:16px 0}h1{font-size:1.5rem}h2{font-size:1.15rem}label{display:block;font-weight:600;margin:10px 0 5px}input{font:inherit;width:100%;padding:11px;border:1px solid #bbcbc6;border-radius:8px}button{font:inherit;padding:11px 15px;border:1px solid #a6c5b9;border-radius:8px;background:#e5f2ec;margin:8px 8px 8px 0;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}#result{background:#eef4f1;border-radius:8px;padding:13px;white-space:pre-wrap;min-height:65px}small{color:#536e6b}a{color:#226156}
+</style></head><body>
+<h1>暗号化・解除テスト</h1><p>STEP 152-B｜データ保護の独立検証版</p>
+<section><strong>実際のクライアント情報や普段使うパスワードは入力しないでください。</strong>
+<p>架空のデータ「NO 0001／テスト専用」を、テスト用パスフレーズで暗号化してブラウザ内に保存します。このページは本番用のログイン機能ではありません。</p></section>
+<section><h2>テスト用パスフレーズ</h2>
+<label for="pass">テスト専用のパスフレーズ（12文字以上）</label>
+<input id="pass" type="password" autocomplete="off" minlength="12" placeholder="実際に使用するパスワードは入力しない">
+<p><small>忘れると復号できません。テスト専用なので、普段のパスワードを使わないでください。</small></p>
+<button id="save" disabled>① 暗号化して保存</button><button id="read" disabled>② 復号して読み込み</button><button id="delete" disabled>③ テストデータを削除</button>
+<h2>確認結果</h2><div id="result" role="status" aria-live="polite">初期化中…</div></section>
+<p><a href="./">← HOMEへ戻る</a></p>
+<script>
+"use strict";
+const DB="jiritsu-clinic-crypto-test-v1",STORE="encryptedRecords",KEY="demo";
+const result=document.getElementById("result"),pass=document.getElementById("pass");
+const buttons=["save","read","delete"].map(id=>document.getElementById(id));
+let db;
+const encoder=new TextEncoder(),decoder=new TextDecoder();
+function message(s){result.textContent=s;}
+function b64(bytes){let str="";for(const n of bytes)str+=String.fromCharCode(n);return btoa(str);}
+function fromB64(str){return Uint8Array.from(atob(str),c=>c.charCodeAt(0));}
+async function derive(password,salt){const material=await crypto.subtle.importKey("raw",encoder.encode(password),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
+function transact(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,mode),req=fn(tx.objectStore(STORE));let value;req.onsuccess=()=>{value=req.result;};tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
+function checkPass(){if(pass.value.length<12){message("テスト用パスフレーズを12文字以上入力してください。");return false;}return true;}
+if(!window.indexedDB||!crypto?.subtle){message("このブラウザではIndexedDBまたはWeb Crypto APIが利用できません。");}
+else{
+const req=indexedDB.open(DB,1);
+req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE);};
+req.onsuccess=()=>{db=req.result;buttons.forEach(b=>b.disabled=false);message("準備完了。テスト専用のパスフレーズを入力してください。");};
+req.onerror=()=>message("データベース初期化失敗："+(req.error?.message||"不明"));
+}
+document.getElementById("save").onclick=async()=>{if(!checkPass())return;buttons.forEach(b=>b.disabled=true);try{
+const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+const key=await derive(pass.value,salt),payload=encoder.encode(JSON.stringify({clientNo:"0001",label:"テスト専用",savedAt:new Date().toISOString()}));
+const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,payload);
+await transact("readwrite",s=>s.put({version:1,salt:b64(salt),iv:b64(iv),ciphertext:b64(new Uint8Array(encrypted))},KEY));
+message("暗号化保存成功。\nパスフレーズ欄を空にして、再入力後に「② 復号して読み込み」を押してください。");
+}catch(e){message("保存失敗："+e.message);}finally{buttons.forEach(b=>b.disabled=false);pass.value="";}};
+document.getElementById("read").onclick=async()=>{if(!checkPass())return;buttons.forEach(b=>b.disabled=true);try{
+const item=await transact("readonly",s=>s.get(KEY));if(!item){message("保存されたテストデータがありません。");return;}
+if(item.version!==1)throw Error("未対応のデータ形式です");
+const key=await derive(pass.value,fromB64(item.salt));
+const plaintext=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(item.iv)},key,fromB64(item.ciphertext));
+const data=JSON.parse(decoder.decode(plaintext));message("復号成功：NO "+data.clientNo+"／"+data.label+"\n保存日時："+data.savedAt);
+}catch(e){if(e.name==="OperationError")message("復号失敗：パスフレーズが違うか、保存データが破損しています。");else message("読み込み失敗："+e.message);}finally{buttons.forEach(b=>b.disabled=false);pass.value="";}};
+document.getElementById("delete").onclick=async()=>{if(!confirm("暗号化した架空テストデータを削除しますか？"))return;try{await transact("readwrite",s=>s.delete(KEY));message("暗号化テストデータを削除しました。");pass.value="";}catch(e){message("削除失敗："+e.message);}};
+</script></body></html>
