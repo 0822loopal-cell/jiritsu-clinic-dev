@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>保存基盤テスト｜自律調整院</title>
+<style>body{font-family:system-ui,"Noto Sans JP",sans-serif;max-width:720px;margin:32px auto;padding:0 18px;color:#243d42;background:#f5f8f7;line-height:1.7}section{background:white;border:1px solid #d9e6e2;border-radius:14px;padding:20px;margin:18px 0}button{padding:12px 18px;border-radius:9px;border:1px solid #aac7bd;background:#e7f3ee;color:#173e36;font:inherit;cursor:pointer;margin:5px 6px 5px 0}button:disabled{opacity:.45;cursor:not-allowed}#result{white-space:pre-wrap;background:#edf3f1;padding:15px;border-radius:9px;min-height:70px}a{color:#225d57}</style></head>
+<body><h1>保存基盤テスト</h1><p>STEP 152-A｜IndexedDBの動作確認専用</p>
+<section><strong>このページでは実際のクライアント情報を入力しないでください。</strong><p>固定の架空データ「0001／テスト専用」を使います。このテストは本番用の顧客管理・認証・暗号化を実装するものではありません。</p></section>
+<section><h2>テスト操作</h2><p>① 保存 → ② ページを再読み込み → ③ 読み込み、の順に確認します。</p>
+<button id="save" disabled>① 架空データを保存</button><button id="read" disabled>③ 保存データを読み込み</button><button id="clear" disabled>テストデータを削除</button>
+<h3>確認結果</h3><div id="result" role="status" aria-live="polite">データベースを準備しています…</div></section>
+<p><a href="./">← HOMEに戻る</a></p>
+<script>
+"use strict";
+const NAME="jiritsu-clinic-storage-test-v1", STORE="testRecords";
+const out=document.getElementById("result"), buttons=["save","read","clear"].map(id=>document.getElementById(id));
+let db=null;
+function report(s){out.textContent=s;}
+function txRequest(mode,run){return new Promise((resolve,reject)=>{const t=db.transaction(STORE,mode),s=t.objectStore(STORE);let value;t.oncomplete=()=>resolve(value);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error);const req=run(s);req.onsuccess=()=>{value=req.result;};req.onerror=()=>reject(req.error);});}
+const open=indexedDB.open(NAME,1);
+open.onupgradeneeded=()=>{const d=open.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:"clientNo"});};
+open.onsuccess=()=>{db=open.result;buttons.forEach(b=>b.disabled=false);report("準備完了。まず「① 架空データを保存」を押してください。");};
+open.onerror=()=>report("データベースを開けませんでした："+(open.error?.message||"原因不明"));
+open.onblocked=()=>report("別のタブでデータベースが使用されています。");
+document.getElementById("save").onclick=async()=>{try{await txRequest("readwrite",s=>s.put({clientNo:"0001",label:"テスト専用",createdAt:new Date().toISOString()}));report("保存成功：架空データ 0001／テスト専用\n次にページを再読み込みしてください。");}catch(e){report("保存失敗："+e.message);}};
+document.getElementById("read").onclick=async()=>{try{const r=await txRequest("readonly",s=>s.get("0001"));report(r?"読み込み成功：NO "+r.clientNo+"／"+r.label+"\n保存日時："+r.createdAt:"データなし。先に保存してください。");}catch(e){report("読み込み失敗："+e.message);}};
+document.getElementById("clear").onclick=async()=>{if(!confirm("架空のテストデータ 0001 を削除しますか？"))return;try{await txRequest("readwrite",s=>s.delete("0001"));report("テストデータを削除しました。");}catch(e){report("削除失敗："+e.message);}};
+</script></body></html>
