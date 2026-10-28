@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.8.2｜画面起動エラー修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.9.0｜クライアントNO管理テスト</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -39,13 +39,15 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <p id="lock-status" class="status" role="status" aria-live="polite">初期化中…</p>
 </section>
 <div id="home-content" hidden>
-<div class="notice"><strong>画面構成の確認版です。</strong><br>実際のクライアント情報の登録・検索・保存は未実装です。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
+<div class="notice"><strong>画面構成の確認版です。</strong><br>架空クライアントNOの登録テストを実装しました。実際の氏名・連絡先などは登録できません。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
 <h2>HOME｜クライアント管理</h2>
 <section class="panel">
 <label for="client-search"><strong>クライアント検索</strong></label>
-<input id="client-search" class="search" type="search" placeholder="クライアントNO・氏名で検索（未実装）" disabled>
-<button type="button" disabled>＋ 新規クライアント登録（未実装）</button>
-<p><small>クライアント一覧は、登録・保護機能の実装後に表示します。</small></p>
+<input id="client-search" class="search" type="search" placeholder="クライアント検索（次の開発で実装）" disabled>
+<button id="client-add" type="button" class="test-action">＋ 架空クライアントを登録</button>
+<p><small>架空データのみ登録できます。氏名・連絡先など実際の個人情報は入力できません。番号は0001からの4桁連番で、削除後も再利用しません。</small></p>
+<p id="client-status" role="status" aria-live="polite">登録状況を確認中…</p>
+<div id="client-list" style="white-space:pre-wrap;background:#f7faf9;border:1px solid #dce7e4;border-radius:8px;padding:12px">登録済みの架空クライアントを確認中…</div>
 </section>
 <h2>クライアント個別画面｜予定する機能</h2>
 <section class="cards" aria-label="個別画面の機能一覧">
@@ -71,7 +73,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <footer>自律調整院｜施設用アプリ開発環境　※ 架空データでの暗号化保存検証専用。実際のクライアント情報は保存できません。</footer>
 <script>
 "use strict";
-const DB_NAME="jiritsu-clinic-home-lock-test-v1",STORE_NAME="settings",DATA_STORE="encryptedDemo",RECORD="lockVerifier",BACKUP_RECORD="lastConfirmedBackup",BACKUP_HISTORY="confirmedBackupHistory";
+const DB_NAME="jiritsu-clinic-home-lock-test-v1",STORE_NAME="settings",DATA_STORE="encryptedDemo",CLIENT_STORE="encryptedClientsTest",CLIENT_SEQ="clientSequenceTest",RECORD="lockVerifier",BACKUP_RECORD="lastConfirmedBackup",BACKUP_HISTORY="confirmedBackupHistory";
 const lockPanel=document.getElementById("lock-panel"),home=document.getElementById("home-content");
 const pass=document.getElementById("lock-pass"),action=document.getElementById("lock-action");
 pass.addEventListener("focus",()=>{pass.readOnly=false;pass.value="";});
@@ -89,15 +91,15 @@ function beginIdle(){stopIdle();idleLimitMs=NORMAL_IDLE_MS;lastActivityAt=Date.n
 const b64=b=>btoa(Array.from(b,n=>String.fromCharCode(n)).join(""));
 const un64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function setStatus(s){status.textContent=s;}
-function showLocked(reason){backupPendingFilename="";backupPendingConfirmation=false;document.getElementById("backup-confirm").disabled=true;stopIdle();activeKey=null;unlocked=false;document.getElementById("demo-status").textContent="ロック中です。解除後に操作してください。";document.getElementById("backup-status").textContent="ロック中です。";document.getElementById("backup-pass").value="";document.getElementById("backup-pass-confirm").value="";document.getElementById("restore-pass").value="";document.getElementById("restore-file").value="";pass.value="";pass.readOnly=true;home.hidden=true;lockPanel.hidden=false;action.textContent=configured?"ロックを解除":"テスト用パスフレーズを設定";title.textContent=configured?"アプリのロック解除":"テスト用パスフレーズの初期設定";setStatus(reason||(configured?"ロック中です。テスト用パスフレーズを入力してください。":"初回設定です。テスト用パスフレーズを12文字以上入力してください。"));}
-function showUnlocked(){unlocked=true;beginIdle();refreshBackupReminder();pass.value="";pass.readOnly=true;lockPanel.hidden=true;home.hidden=false;document.getElementById("demo-status").textContent="ロック解除済みです。操作を選択してください。";document.getElementById("backup-status").textContent="操作を選択してください。";}
+function showLocked(reason){document.getElementById("client-list").textContent="ロック中です。";document.getElementById("client-status").textContent="ロック中です。";backupPendingFilename="";backupPendingConfirmation=false;document.getElementById("backup-confirm").disabled=true;stopIdle();activeKey=null;unlocked=false;document.getElementById("demo-status").textContent="ロック中です。解除後に操作してください。";document.getElementById("backup-status").textContent="ロック中です。";document.getElementById("backup-pass").value="";document.getElementById("backup-pass-confirm").value="";document.getElementById("restore-pass").value="";document.getElementById("restore-file").value="";pass.value="";pass.readOnly=true;home.hidden=true;lockPanel.hidden=false;action.textContent=configured?"ロックを解除":"テスト用パスフレーズを設定";title.textContent=configured?"アプリのロック解除":"テスト用パスフレーズの初期設定";setStatus(reason||(configured?"ロック中です。テスト用パスフレーズを入力してください。":"初回設定です。テスト用パスフレーズを12文字以上入力してください。"));}
+function showUnlocked(){unlocked=true;beginIdle();refreshBackupReminder();refreshClientList();pass.value="";pass.readOnly=true;lockPanel.hidden=true;home.hidden=false;document.getElementById("demo-status").textContent="ロック解除済みです。操作を選択してください。";document.getElementById("backup-status").textContent="操作を選択してください。";}
 async function keyFor(p,salt){const base=await crypto.subtle.importKey("raw",enc.encode(p),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
 function store(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,mode),r=fn(tx.objectStore(STORE_NAME));let val;r.onsuccess=()=>val=r.result;tx.oncomplete=()=>resolve(val);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
 async function init(){
 lockPanel.hidden=false;home.hidden=true;
 if(!indexedDB||!crypto?.subtle){setStatus("このブラウザは必要な保存・暗号化機能に対応していません。");return;}
 try{
-db=await new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE_NAME))r.result.createObjectStore(STORE_NAME);if(!r.result.objectStoreNames.contains(DATA_STORE))r.result.createObjectStore(DATA_STORE);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+db=await new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,3);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE_NAME))r.result.createObjectStore(STORE_NAME);if(!r.result.objectStoreNames.contains(DATA_STORE))r.result.createObjectStore(DATA_STORE);if(!r.result.objectStoreNames.contains(CLIENT_STORE))r.result.createObjectStore(CLIENT_STORE);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
 configured=!!(await store("readonly",s=>s.get(RECORD)));
 action.disabled=false;showLocked();
 }catch(e){setStatus("初期化失敗："+e.message);}
@@ -137,6 +139,11 @@ document.getElementById("history-preview").onclick=async()=>{if(!unlocked)return
 document.getElementById("history-reset").onclick=async()=>{if(!unlocked)return;resetHistoryPreview();await refreshBackupReminder();};
 document.getElementById("backup-preview").onclick=()=>refreshBackupReminder(true);
 document.getElementById("backup-confirm").onclick=async()=>{if(!unlocked||!backupPendingConfirmation)return;if(!confirm("ダウンロード先に暗号化バックアップファイルが保存されていることを確認しましたか？"))return;const key=activeKey;try{const history=await loadBackupHistory();if(!unlocked||activeKey!==key)return;const now=new Date().toISOString(),next=newestFour([{confirmedAt:now,fileName:backupPendingFilename||"ファイル名未確認"},...history]);await store("readwrite",s=>s.put(next,BACKUP_HISTORY));if(!unlocked||activeKey!==key)return;backupPendingConfirmation=false;backupPendingFilename="";document.getElementById("backup-confirm").disabled=true;await refreshBackupReminder();}catch(e){if(unlocked)document.getElementById("backup-reminder").textContent="保存確認の記録に失敗しました："+e.message;}};
+
+
+function clientTransaction(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction([STORE_NAME,CLIENT_STORE],mode),settings=tx.objectStore(STORE_NAME),clients=tx.objectStore(CLIENT_STORE);let result;try{fn(settings,clients,v=>{result=v;});}catch(e){tx.abort();reject(e);return;}tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("保存処理が中断されました。"));});}
+async function refreshClientList(){if(!unlocked||!activeKey||!db)return;const key=activeKey,el=document.getElementById("client-list"),note=document.getElementById("client-status");try{const records=await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readonly"),req=tx.objectStore(CLIENT_STORE).getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});if(!unlocked||activeKey!==key)return;const list=[];for(const item of records){const bytes=await crypto.subtle.decrypt({name:"AES-GCM",iv:un64(item.iv)},key,un64(item.ciphertext));const data=JSON.parse(dec.decode(bytes));if(!/^\\d{4}$/.test(data.clientNo)||data.testOnly!==true)throw Error("登録データの形式が不正です。");list.push(data);}if(!unlocked||activeKey!==key)return;list.sort((a,b)=>a.clientNo.localeCompare(b.clientNo));el.textContent=list.length?list.map(x=>"NO "+x.clientNo+"｜架空クライアント｜"+new Date(x.createdAt).toLocaleString("ja-JP")).join("\\n"):"登録済みの架空クライアントはありません。";note.textContent="架空クライアント登録数："+list.length+"件（番号は削除後も再利用しない設計）";}catch(e){if(unlocked){el.textContent="一覧の読み取りに失敗しました。";note.textContent="エラー："+e.message;}}}
+document.getElementById("client-add").onclick=async()=>{if(!unlocked||!activeKey)return;const key=activeKey,btn=document.getElementById("client-add"),note=document.getElementById("client-status");feedback(btn,true,"登録中…");try{const seq=await store("readonly",s=>s.get(CLIENT_SEQ));const next=(Number.isSafeInteger(seq)&&seq>=0?seq:0)+1;if(next>9999)throw Error("4桁番号の上限に達しました。登録できません。");const clientNo=String(next).padStart(4,"0"),data={clientNo,testOnly:true,createdAt:new Date().toISOString()},iv=crypto.getRandomValues(new Uint8Array(12)),encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key)return;const result=await clientTransaction("readwrite",(settings,clients,setResult)=>{const req=settings.get(CLIENT_SEQ);req.onsuccess=()=>{const current=Number.isSafeInteger(req.result)&&req.result>=0?req.result:0;if(current!==next-1){throw new Error("番号の更新競合が発生しました。再試行してください。");}settings.put(next,CLIENT_SEQ);clients.add({iv:b64(iv),ciphertext:b64(new Uint8Array(encrypted))},clientNo);setResult(clientNo);};});if(!unlocked||activeKey!==key)return;await refreshClientList();note.textContent="登録成功：架空クライアント NO "+result+"（暗号化保存）";}catch(e){if(unlocked)note.textContent="登録失敗："+e.message;}finally{feedback(btn,false);}};
 
 function feedback(button,on,label){if(on){button.dataset.originalLabel=button.textContent;button.textContent=label;button.classList.add("is-busy");button.disabled=true;}else{button.textContent=button.dataset.originalLabel||button.textContent;button.classList.remove("is-busy");button.disabled=false;}}
 document.querySelectorAll(".test-action").forEach(b=>b.addEventListener("click",()=>{b.classList.add("just-clicked");setTimeout(()=>b.classList.remove("just-clicked"),450);}));
