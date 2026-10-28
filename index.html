@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.8.1｜4世代上限の表示テスト</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.8.2｜画面起動エラー修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -128,7 +128,7 @@ function dataStore(mode,fn){return new Promise((resolve,reject)=>{const tx=db.tr
 const demoStatus=document.getElementById("demo-status");
 let backupPendingConfirmation=false,backupPendingFilename="";
 function newestFour(items){return items.slice(0,4);}
-async function loadBackupHistory(){const list=await store("readonly",s=>s.get(BACKUP_HISTORY));if(Array.isArray(list))return list.filter(x=>x&&Number.isFinite(Date.parse(x.confirmedAt))));;const legacy=await store("readonly",s=>s.get(BACKUP_RECORD));return legacy&&Number.isFinite(Date.parse(legacy.confirmedAt))?[{confirmedAt:legacy.confirmedAt,fileName:"以前の保存確認（ファイル名未記録）"}]:[];}
+async function loadBackupHistory(){const list=await store("readonly",s=>s.get(BACKUP_HISTORY));if(Array.isArray(list))return list.filter(x=>x&&Number.isFinite(Date.parse(x.confirmedAt)));const legacy=await store("readonly",s=>s.get(BACKUP_RECORD));return legacy&&Number.isFinite(Date.parse(legacy.confirmedAt))?[{confirmedAt:legacy.confirmedAt,fileName:"以前の保存確認（ファイル名未記録）"}]:[];}
 function renderBackupHistory(items){const el=document.getElementById("backup-history");items=newestFour(items);el.textContent=items.length?items.map((item,i)=>(i+1)+"．"+new Date(item.confirmedAt).toLocaleString("ja-JP")+"\n　"+item.fileName).join("\n"):"保存確認履歴はありません。";}
 
 async function refreshBackupReminder(simulateOverdue=false){if(!unlocked||!db)return;const el=document.getElementById("backup-reminder");try{const history=await loadBackupHistory();if(!unlocked)return;if(!document.getElementById("history-reset").hidden)resetHistoryPreview();renderBackupHistory(history);const date=history.length?Date.parse(history[0].confirmedAt):NaN;if(!Number.isFinite(date)){el.textContent="バックアップの保存確認記録がありません。\n暗号化バックアップを作成し、ダウンロード先のファイルを確認してください。";return;}const elapsed=Math.max(0,Date.now()-date),days=Math.floor(elapsed/86400000),overdue=simulateOverdue||elapsed>=7*86400000;el.textContent=(simulateOverdue?"【7日経過時の表示テスト／実際の記録は変更していません】\n":"")+(overdue?"バックアップの保存確認から7日以上経過しました。新しい暗号化バックアップを作成し、ファイルの保存を確認してください。":"バックアップ保存確認済み。次の確認目安まで "+Math.max(1,Math.ceil((7*86400000-elapsed)/86400000))+" 日です。")+"\n最終保存確認： "+new Date(date).toLocaleString("ja-JP")+"（"+days+"日経過）";}catch(e){if(unlocked)el.textContent="バックアップ通知の読み取りに失敗しました："+e.message;}}
