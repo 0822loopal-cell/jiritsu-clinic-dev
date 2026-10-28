@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.9.2｜クライアント個別画面</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.9.3｜生活目標</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -49,7 +49,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <p id="client-status" role="status" aria-live="polite">登録状況を確認中…</p>
 <div id="client-list" style="white-space:pre-wrap;background:#f7faf9;border:1px solid #dce7e4;border-radius:8px;padding:12px">登録済みの架空クライアントを確認中…</div>
 </section>
-<section id="client-detail" class="panel" hidden aria-label="クライアント個別画面"><button id="client-back" type="button" class="test-action">← HOMEの一覧へ戻る</button><h2 id="client-detail-title">クライアント概要</h2><p id="client-detail-summary" style="white-space:pre-wrap;background:#f0f6f3;padding:12px;border-radius:8px"></p><strong>個別機能（順次実装）</strong><div class="cards" style="margin-top:12px"><div class="card"><strong>概要</strong><span>現在表示中</span></div><div class="card"><strong>ヒアリング</strong><span>次の開発で対応</span></div><div class="card"><strong>評価・測定</strong><span>準備中</span></div><div class="card"><strong>施術記録</strong><span>準備中</span></div><div class="card"><strong>セルフケア</strong><span>準備中</span></div><div class="card"><strong>週間経過</strong><span>準備中</span></div></div></section><h2>クライアント個別画面｜予定する機能</h2>
+<section id="client-detail" class="panel" hidden aria-label="クライアント個別画面"><button id="client-back" type="button" class="test-action">← HOMEの一覧へ戻る</button><h2 id="client-detail-title">クライアント概要</h2><p id="client-detail-summary" style="white-space:pre-wrap;background:#f0f6f3;padding:12px;border-radius:8px"></p><label for="life-goal"><strong>生活目標（架空データ専用・1件）</strong></label><textarea id="life-goal" class="search" maxlength="200" rows="3" placeholder="例：近所のスーパーで15分買い物をする"></textarea><button id="life-goal-save" type="button" class="test-action">生活目標を暗号化して保存</button><p id="life-goal-status" role="status"></p><strong>個別機能（順次実装）</strong><div class="cards" style="margin-top:12px"><div class="card"><strong>概要</strong><span>現在表示中</span></div><div class="card"><strong>ヒアリング</strong><span>次の開発で対応</span></div><div class="card"><strong>評価・測定</strong><span>準備中</span></div><div class="card"><strong>施術記録</strong><span>準備中</span></div><div class="card"><strong>セルフケア</strong><span>準備中</span></div><div class="card"><strong>週間経過</strong><span>準備中</span></div></div></section><h2>クライアント個別画面｜予定する機能</h2>
 <section class="cards" aria-label="個別画面の機能一覧">
 <div class="card"><strong>概要</strong><span>基本情報・生活目標・直近の支援状況</span></div>
 <div class="card"><strong>ヒアリング</strong><span>初回・追加ヒアリング</span></div>
@@ -142,8 +142,8 @@ document.getElementById("backup-confirm").onclick=async()=>{if(!unlocked||!backu
 
 
 let clientListCache=[],selectedClientNo=null;
-function closeClientDetail(){selectedClientNo=null;document.getElementById("client-detail").hidden=true;document.getElementById("client-detail-summary").textContent="";}
-function openClientDetail(no){if(!unlocked)return;const item=clientListCache.find(x=>x.clientNo===no);if(!item)return;selectedClientNo=no;document.getElementById("client-detail-title").textContent="クライアント概要｜NO "+no;document.getElementById("client-detail-summary").textContent="クライアントNO： "+no+"\n登録区分： 架空クライアント（テスト専用）\n登録日時： "+new Date(item.createdAt).toLocaleString("ja-JP")+"\n生活目標： 未登録\nヒアリング： 未登録\n施術記録： 未登録";document.getElementById("client-detail").hidden=false;document.getElementById("client-detail").scrollIntoView({behavior:"smooth",block:"start"});}
+function closeClientDetail(){selectedClientNo=null;document.getElementById("life-goal").value="";document.getElementById("life-goal-status").textContent="";document.getElementById("client-detail").hidden=true;document.getElementById("client-detail-summary").textContent="";}
+async function openClientDetail(no){if(!unlocked)return;const item=clientListCache.find(x=>x.clientNo===no);if(!item)return;selectedClientNo=no;document.getElementById("client-detail-title").textContent="クライアント概要｜NO "+no;document.getElementById("client-detail-summary").textContent="クライアントNO： "+no+"\n登録区分： 架空クライアント（テスト専用）\n登録日時： "+new Date(item.createdAt).toLocaleString("ja-JP")+"\n生活目標： 未登録\nヒアリング： 未登録\n施術記録： 未登録";document.getElementById("client-detail").hidden=false;document.getElementById("client-detail").scrollIntoView({behavior:"smooth",block:"start"});await loadLifeGoal(no);}
 document.getElementById("client-back").onclick=()=>{closeClientDetail();document.getElementById("client-search").focus();};
 document.getElementById("client-list").addEventListener("click",event=>{const button=event.target.closest("button[data-client-no]");if(button)openClientDetail(button.dataset.clientNo);});
 function renderClientList(){const el=document.getElementById("client-list"),q=document.getElementById("client-search").value.trim();if(!unlocked)return;if(q&&!/^\d{1,4}$/.test(q)){el.textContent="クライアントNOは半角数字4桁以内で入力してください。";return;}const matched=q?clientListCache.filter(x=>x.clientNo.startsWith(q)):clientListCache;el.replaceChildren();if(!matched.length){el.textContent=q?"該当する架空クライアントはありません。":"登録済みの架空クライアントはありません。";return;}for(const item of matched){const b=document.createElement("button");b.type="button";b.className="client-open";b.dataset.clientNo=item.clientNo;b.textContent="NO "+item.clientNo+"｜架空クライアント｜"+new Date(item.createdAt).toLocaleString("ja-JP")+"　（概要を開く）";el.appendChild(b);}}
