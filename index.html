@@ -24,11 +24,11 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 .lockpanel button{cursor:pointer;background:#e5f2ec;color:#204b42;border-color:#b6d3c8}
 .lockpanel button:disabled{opacity:.5;cursor:not-allowed}
 .lockpanel .status{white-space:pre-wrap;margin-top:12px;background:#f0f6f3;padding:12px;border-radius:8px}
-#home-content[hidden],#lock-panel[hidden]{display:none!important}
+#home-content[hidden],#lock-panel[hidden]{display:none!important}.test-action{cursor:pointer;background:#e5f2ec;color:#204b42;border-color:#b6d3c8;margin:12px 8px 0 0}.test-action:disabled{opacity:.5;cursor:not-allowed}#demo-status{white-space:pre-wrap;background:#f0f6f3;padding:12px;border-radius:8px}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.2.0｜HOME・ロック検証</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.3.0｜HOME・暗号化保存統合検証</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -39,7 +39,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <p id="lock-status" class="status" role="status" aria-live="polite">初期化中…</p>
 </section>
 <div id="home-content" hidden>
-<div class="notice"><strong>画面構成の確認版です。</strong><br>クライアント情報の登録・検索・保存は未実装です。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
+<div class="notice"><strong>画面構成の確認版です。</strong><br>実際のクライアント情報の登録・検索・保存は未実装です。個人情報を入力しないでください。GitHub PagesのURL自体は公開されています。</div>
 <h2>HOME｜クライアント管理</h2>
 <section class="panel">
 <label for="client-search"><strong>クライアント検索</strong></label>
@@ -63,22 +63,23 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 <div class="card"><strong>バックアップ・復元</strong><span>暗号化ファイルによる手動運用</span></div>
 <div class="card"><strong>アプリ設定</strong><span>保存・バージョン情報</span></div>
 </section>
+<section class="panel" aria-label="暗号化保存の統合検証"><strong>STEP 154｜暗号化保存の統合検証（架空データ専用）</strong><p>HOMEのロック解除に使用した鍵で、架空データ「NO 0001／テスト専用」を暗号化して保存・読み取りします。実際のクライアント情報は入力しないでください。</p><button id="demo-save" type="button" class="test-action">架空データを暗号化して保存</button> <button id="demo-read" type="button" class="test-action">暗号化データを復号して確認</button><p id="demo-status" class="status" role="status" aria-live="polite">操作を選択してください。</p></section>
 <section class="panel"><strong>ロック動作の確認</strong><p>HOME表示中にロックすると、画面が非表示になります。</p><button id="relock" type="button" style="cursor:pointer;color:#204b42;background:#e5f2ec">ロックする</button></section>
 </div>
 </main>
-<footer>自律調整院｜施設用アプリ開発環境　※ ロック検証専用。クライアント情報の保存処理はありません。</footer>
+<footer>自律調整院｜施設用アプリ開発環境　※ 架空データでの暗号化保存検証専用。実際のクライアント情報は保存できません。</footer>
 <script>
 "use strict";
-const DB_NAME="jiritsu-clinic-home-lock-test-v1",STORE_NAME="settings",RECORD="lockVerifier";
+const DB_NAME="jiritsu-clinic-home-lock-test-v1",STORE_NAME="settings",DATA_STORE="encryptedDemo",RECORD="lockVerifier";
 const lockPanel=document.getElementById("lock-panel"),home=document.getElementById("home-content");
 const pass=document.getElementById("lock-pass"),action=document.getElementById("lock-action");
 const title=document.getElementById("lock-title"),status=document.getElementById("lock-status");
 const enc=new TextEncoder(),dec=new TextDecoder();
-let db,configured=false,unlocked=false;
+let db,configured=false,unlocked=false,activeKey=null;
 const b64=b=>btoa(Array.from(b,n=>String.fromCharCode(n)).join(""));
 const un64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 function setStatus(s){status.textContent=s;}
-function showLocked(){unlocked=false;pass.value="";home.hidden=true;lockPanel.hidden=false;action.textContent=configured?"ロックを解除":"テスト用パスフレーズを設定";title.textContent=configured?"アプリのロック解除":"テスト用パスフレーズの初期設定";setStatus(configured?"ロック中です。テスト用パスフレーズを入力してください。":"初回設定です。テスト用パスフレーズを12文字以上入力してください。");}
+function showLocked(){activeKey=null;unlocked=false;pass.value="";home.hidden=true;lockPanel.hidden=false;action.textContent=configured?"ロックを解除":"テスト用パスフレーズを設定";title.textContent=configured?"アプリのロック解除":"テスト用パスフレーズの初期設定";setStatus(configured?"ロック中です。テスト用パスフレーズを入力してください。":"初回設定です。テスト用パスフレーズを12文字以上入力してください。");}
 function showUnlocked(){unlocked=true;pass.value="";lockPanel.hidden=true;home.hidden=false;}
 async function keyFor(p,salt){const base=await crypto.subtle.importKey("raw",enc.encode(p),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
 function store(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE_NAME,mode),r=fn(tx.objectStore(STORE_NAME));let val;r.onsuccess=()=>val=r.result;tx.oncomplete=()=>resolve(val);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
@@ -86,7 +87,7 @@ async function init(){
 lockPanel.hidden=false;home.hidden=true;
 if(!indexedDB||!crypto?.subtle){setStatus("このブラウザは必要な保存・暗号化機能に対応していません。");return;}
 try{
-db=await new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE_NAME))r.result.createObjectStore(STORE_NAME);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+db=await new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE_NAME))r.result.createObjectStore(STORE_NAME);if(!r.result.objectStoreNames.contains(DATA_STORE))r.result.createObjectStore(DATA_STORE);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
 configured=!!(await store("readonly",s=>s.get(RECORD)));
 action.disabled=false;showLocked();
 }catch(e){setStatus("初期化失敗："+e.message);}
@@ -101,18 +102,22 @@ const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(
 const key=await keyFor(p,salt);
 const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode("JIRITSU-LOCK-TEST-V1"));
 await store("readwrite",s=>s.put({version:1,salt:b64(salt),iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))},RECORD));
-configured=true;showUnlocked();
+activeKey=key;configured=true;showUnlocked();
 }else{
 const record=await store("readonly",s=>s.get(RECORD));
 if(!record||record.version!==1)throw new Error("ロック設定が見つからないか未対応の形式です。");
 const key=await keyFor(p,un64(record.salt));
 const bytes=await crypto.subtle.decrypt({name:"AES-GCM",iv:un64(record.iv)},key,un64(record.ciphertext));
 if(dec.decode(bytes)!=="JIRITSU-LOCK-TEST-V1")throw new Error("検証データが一致しません。");
-showUnlocked();
+activeKey=key;showUnlocked();
 }
 }catch(e){setStatus(e.name==="OperationError"?"解除できません。パスフレーズが違うか、設定データが破損しています。":"操作失敗："+e.message);pass.value="";}
 finally{action.disabled=false;}
 };
+function dataStore(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(DATA_STORE,mode),r=fn(tx.objectStore(DATA_STORE));let val;r.onsuccess=()=>val=r.result;tx.oncomplete=()=>resolve(val);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
+const demoStatus=document.getElementById("demo-status");
+document.getElementById("demo-save").onclick=async()=>{const key=activeKey;if(!unlocked||!key)return;try{const data={clientNo:"0001",label:"テスト専用",savedAt:new Date().toISOString()},iv=crypto.getRandomValues(new Uint8Array(12)),bytes=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key)return;await dataStore("readwrite",s=>s.put({iv:b64(iv),ciphertext:b64(new Uint8Array(bytes))},"demo"));demoStatus.textContent="架空データを暗号化して保存しました：NO 0001／テスト専用";}catch(e){demoStatus.textContent="保存失敗："+e.message;}};
+document.getElementById("demo-read").onclick=async()=>{const key=activeKey;if(!unlocked||!key)return;try{const record=await dataStore("readonly",s=>s.get("demo"));if(!record){demoStatus.textContent="保存データがありません。";return;}const bytes=await crypto.subtle.decrypt({name:"AES-GCM",iv:un64(record.iv)},key,un64(record.ciphertext));if(!unlocked||activeKey!==key)return;const data=JSON.parse(dec.decode(bytes));if(data.clientNo!=="0001"||data.label!=="テスト専用")throw Error("架空データの内容が不正です。");demoStatus.textContent="復号成功：NO "+data.clientNo+"／"+data.label+"\n保存日時："+data.savedAt;}catch(e){demoStatus.textContent="読み取り失敗："+e.message;}};
 document.getElementById("relock").onclick=()=>showLocked();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&unlocked)showLocked();});
 init();
