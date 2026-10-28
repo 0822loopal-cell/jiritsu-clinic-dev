@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.7.0｜7日ごとのバックアップ通知</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.7.1｜バックアップ通知の改行修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -127,7 +127,7 @@ finally{action.disabled=false;}
 function dataStore(mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction(DATA_STORE,mode),r=fn(tx.objectStore(DATA_STORE));let val;r.onsuccess=()=>val=r.result;tx.oncomplete=()=>resolve(val);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
 const demoStatus=document.getElementById("demo-status");
 let backupPendingConfirmation=false;
-async function refreshBackupReminder(simulateOverdue=false){if(!unlocked||!db)return;const el=document.getElementById("backup-reminder");try{const saved=await store("readonly",s=>s.get(BACKUP_RECORD));if(!unlocked)return;const date=saved&&typeof saved.confirmedAt==="string"?Date.parse(saved.confirmedAt):NaN;if(!Number.isFinite(date)){el.textContent="バックアップの保存確認記録がありません。\\n暗号化バックアップを作成し、ダウンロード先のファイルを確認してください。";return;}const elapsed=Math.max(0,Date.now()-date),days=Math.floor(elapsed/86400000),overdue=simulateOverdue||elapsed>=7*86400000;el.textContent=(simulateOverdue?"【7日経過時の表示テスト／実際の記録は変更していません】\\n":"")+(overdue?"バックアップの保存確認から7日以上経過しました。新しい暗号化バックアップを作成し、ファイルの保存を確認してください。":"バックアップ保存確認済み。次の確認目安まで "+Math.max(1,Math.ceil((7*86400000-elapsed)/86400000))+" 日です。")+"\\n最終保存確認： "+new Date(date).toLocaleString("ja-JP")+"（"+days+"日経過）";}catch(e){if(unlocked)el.textContent="バックアップ通知の読み取りに失敗しました："+e.message;}}
+async function refreshBackupReminder(simulateOverdue=false){if(!unlocked||!db)return;const el=document.getElementById("backup-reminder");try{const saved=await store("readonly",s=>s.get(BACKUP_RECORD));if(!unlocked)return;const date=saved&&typeof saved.confirmedAt==="string"?Date.parse(saved.confirmedAt):NaN;if(!Number.isFinite(date)){el.textContent="バックアップの保存確認記録がありません。\n暗号化バックアップを作成し、ダウンロード先のファイルを確認してください。";return;}const elapsed=Math.max(0,Date.now()-date),days=Math.floor(elapsed/86400000),overdue=simulateOverdue||elapsed>=7*86400000;el.textContent=(simulateOverdue?"【7日経過時の表示テスト／実際の記録は変更していません】\n":"")+(overdue?"バックアップの保存確認から7日以上経過しました。新しい暗号化バックアップを作成し、ファイルの保存を確認してください。":"バックアップ保存確認済み。次の確認目安まで "+Math.max(1,Math.ceil((7*86400000-elapsed)/86400000))+" 日です。")+"\n最終保存確認： "+new Date(date).toLocaleString("ja-JP")+"（"+days+"日経過）";}catch(e){if(unlocked)el.textContent="バックアップ通知の読み取りに失敗しました："+e.message;}}
 document.getElementById("backup-preview").onclick=()=>refreshBackupReminder(true);
 document.getElementById("backup-confirm").onclick=async()=>{if(!unlocked||!backupPendingConfirmation)return;if(!confirm("ダウンロード先に暗号化バックアップファイルが保存されていることを確認しましたか？"))return;const key=activeKey;try{await store("readwrite",s=>s.put({confirmedAt:new Date().toISOString()},BACKUP_RECORD));if(!unlocked||activeKey!==key)return;backupPendingConfirmation=false;document.getElementById("backup-confirm").disabled=true;await refreshBackupReminder();}catch(e){if(unlocked)document.getElementById("backup-reminder").textContent="保存確認の記録に失敗しました："+e.message;}};
 
