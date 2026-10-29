@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.19｜STEP 195 A01抽出判定修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.20｜STEP 195 候補抽出の整合性修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -174,11 +174,12 @@ if((id==="A02"||id==="A03")&&matches.length){if(gaze===null){state="要追加確
 if((id==="A02"||id==="A03")&&!matches.length&&gaze!==null&&gaze>0&&!picked.includes("特になし")){state="要追加確認";reason="視界のぶれ："+gaze+"／頭部運動の方向は未確認";}
 const r3={B03:standing,C01:walking,C02:[left,right].some(v=>v!==null&&v>=2)?2:([left,right].some(v=>v!==null)?1:null)};
 if(id in r3&&r3[id]!==null&&r3[id]>=2){state="関連候補";reason+=(reason?"／":"")+"4領域評価で"+(id==="B03"?"立位":id==="C01"?"直進歩行":"方向転換")+"に課題";}
-if(["B02","B04"].includes(id)&&!matches.length&&standing!==null&&standing>=2){state="要追加確認";reason="立位評価に課題／固有動作は未確認";}
+if(["B02","B04"].includes(id)&&!matches.length&&standing!==null&&standing>=2){state="要追加確認";reason=picked.includes("特になし")?"Q2では特になし／立位評価に課題あり。回答と評価の関係を確認":"立位評価に課題／固有動作は未確認";}
+if(id==="C02"&&picked.includes("特になし")&&[left,right].some(v=>v!==null&&v>=2)){state="要追加確認";reason="Q3では特になし／方向転換評価に課題あり。回答と評価の食い違いを確認";}
 if(id==="C04"&&matches.length&&(walking===null||walking>=3)){state="要追加確認";reason+="／基本歩行・支持条件の確認が必要";}
 if(id==="C05"&&matches.length&&(walking===null||walking>=3)){state="要追加確認";reason+="／基本動作の実施能力が未確認";}
 if(id==="A05"&&matches.length){state="要追加確認";reason+="／基本的な視線安定化の実施状況が未確認";}
-if(id==="D05"&&matches.length){state="要追加確認";reason+="／胸郭・肩甲帯の連動動作は未評価";}
+if(id==="D05"&&matches.length){state="要追加確認";reason+=(picked.includes("胸郭")&&picked.includes("肩甲帯")?"／胸郭・肩甲帯の両方が該当。連動動作は未評価":"／胸郭・肩甲帯の片方のみ該当。連動動作の関連性は未確認");}
 if(state!=="関連性未確認")results.push({id,name,state,reason,check});
 }
 const sortRank={"関連候補":0,"要追加確認":1};results.sort((a,b)=>sortRank[a.state]-sortRank[b.state]||a.id.localeCompare(b.id));
