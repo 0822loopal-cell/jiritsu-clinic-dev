@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.29｜STEP 197 7日間共有文の照合</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.30｜STEP 197 DLT共有データの内容確認</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -238,6 +238,7 @@ if(!Number.isFinite(start)||!Number.isFinite(end)||end-start!==6*86400000||new D
 const extract=(title)=>{const i=text.indexOf(title);if(i<0)return null;return text.slice(i+title.length).trimStart().split(/\n\s*\n/)[0].trim();};
 const record=extract("① 記録状況"),dlt=extract("③ DLT｜症状と生活への影響"),care=extract("④ セルフケア・セルフリハ");
 if(!record||!dlt||!care)return "必要な共有項目が不足しています。共有文を省略せずに貼り付けてください。";
+if(["めまい：記録なし","ふらつき：記録なし","耳鳴り：記録なし","日常生活への影響：記録なし"].every(v=>dlt.includes(v))&&care.includes("未記録 7日"))return "【内容確認が必要】\nNO・集計期間・共有形式は一致しましたが、DLTの4項目がすべて記録なし、セルフケアも7日間未記録です。\n症状・セルフケアの値がある週間サマリーをクライアント用アプリで表示し、その画面の「共有文をコピーする（PC用）」を押して再度貼り付けてください。\n※今回は取り込み確認OKとせず、保存もしません。";
 return "【取り込み前照合：OK】\nクライアントNO："+client+"（一致）\n集計期間："+period+"（7日間）\n集計週："+(week||"未記載")+"\n\n【記録状況】\n"+record+"\n\n【症状・生活への影響】\n"+dlt+"\n\n【セルフケア】\n"+care+"\n\n※この画面では保存していません。";
 }
 document.getElementById("dlt-week-preview-button").onclick=()=>{if(!unlocked||!selectedClientNo)return;document.getElementById("dlt-week-preview-result").textContent=inspectDltWeeklyText(document.getElementById("dlt-week-preview-input").value,selectedClientNo);};
