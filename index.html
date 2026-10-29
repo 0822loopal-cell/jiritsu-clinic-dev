@@ -291,7 +291,7 @@ document.getElementById("dlt-week-save-button").onclick=async()=>{
   info.textContent="【暗号化保存・再読み取り：OK】\nクライアントNO："+verified.no+"\n集計期間："+verified.period+"\n集計週："+verified.week+"\n保存済み週間記録："+reread.weeklyShares.length+"件\n既存の施術・評価・セルフケア設定は変更していません。";
   resetDltWeeklyVerification();
  }catch(e){if(unlocked&&activeKey===key)info.textContent="保存または再読み取りに失敗しました："+e.message;}
- finally{feedback(button,false);}
+ finally{feedback(button,false);if(!dltWeeklyVerified)button.disabled=true;}
 };
 document.getElementById("dlt-week-read-button").onclick=async()=>{
  const no=selectedClientNo,key=activeKey,info=document.getElementById("dlt-week-preview-result");
