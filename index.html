@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.33｜STEP 200 週間経過一覧・週比較の基盤</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.34｜STEP 200 単週比較表示の修正・第2週検証</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -333,6 +333,7 @@ function weeklyTrendOverview(data){
   lines.push("セルフケア："+(row.care?"実施 "+row.care.done+"日／未実施 "+row.care.notDone+"日":"記録不明"));
  }
  const first=rows[0],last=rows[rows.length-1];
+ if(rows.length===1){lines.push("","【初回登録週からの比較】","比較対象となる次の週がありません。");return lines.join("\n");}
  lines.push("","【初回登録週からの比較】");
  for(const name of names){
   const a=first.values[name],b=last.values[name];
