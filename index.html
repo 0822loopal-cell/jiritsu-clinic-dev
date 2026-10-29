@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.21｜STEP 195 評価日と参照履歴を明示</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.22｜STEP 195 候補別評価日・再確認表示</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -161,7 +161,7 @@ try{
 const data=await readClientData(no,key);if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
 const qs=data.selfcareChecks&&typeof data.selfcareChecks==="object"?data.selfcareChecks:{};
 const assessments=Array.isArray(data.assessments)?data.assessments:[];
-const latest={},fieldSources={};for(const a of assessments){for(const [field,value] of Object.entries(a.values||{}))if(value!==""&&value!=null){latest[field]=value;fieldSources[field]=a.date||"評価日未設定";}}
+const orderedAssessments=assessments.slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||""))||String(a.savedAt||"").localeCompare(String(b.savedAt||"")));const latest={},fieldSources={};for(const a of orderedAssessments){for(const [field,value] of Object.entries(a.values||{}))if(value!==""&&value!=null){latest[field]=value;fieldSources[field]=a.date||"評価日未設定";}}const latestAssessmentDate=orderedAssessments.length?orderedAssessments[orderedAssessments.length-1].date||"評価日未設定":null;
 const numberField=k=>latest[k]!==undefined&&/^[0-4]$/.test(String(latest[k]))?Number(latest[k]):null;
 const gaze=numberField("gazeBlur"),standing=numberField("postureStanding"),walking=numberField("postureWalking"),left=numberField("postureTurnLeft"),right=numberField("postureTurnRight");
 const results=[];
@@ -180,12 +180,19 @@ if(id==="C04"&&matches.length&&(walking===null||walking>=3)){state="要追加確
 if(id==="C05"&&matches.length&&(walking===null||walking>=3)){state="要追加確認";reason+="／基本動作の実施能力が未確認";}
 if(id==="A05"&&matches.length){state="要追加確認";reason+="／基本的な視線安定化の実施状況が未確認";}
 if(id==="D05"&&matches.length){state="要追加確認";reason+=(picked.includes("胸郭")&&picked.includes("肩甲帯")?"／胸郭・肩甲帯の両方が該当。連動動作は未評価":"／胸郭・肩甲帯の片方のみ該当。連動動作の関連性は未確認");}
-if(state!=="関連性未確認")results.push({id,name,state,reason,check});
+if(state!=="関連性未確認"){
+const relevantFields=id==="A02"||id==="A03"?["gazeBlur"]:id==="B03"||id==="B02"||id==="B04"?["postureStanding"]:id==="C01"||id==="C04"||id==="C05"?["postureWalking"]:id==="C02"?["postureTurnLeft","postureTurnRight"]:[];
+const fieldNames={gazeBlur:"視界のぶれ",postureStanding:"立位",postureWalking:"直進歩行",postureTurnLeft:"左方向転換",postureTurnRight:"右方向転換"};
+const references=relevantFields.map(field=>({field,label:fieldNames[field],date:fieldSources[field]||null,value:latest[field]??null}));
+const older=references.filter(ref=>ref.date&&latestAssessmentDate&&ref.date!==latestAssessmentDate);
+if(older.length){state="要追加確認";reason+="／過去の評価値を参照しているため再確認が必要";}
+results.push({id,name,state,reason,check,references,older:older.length>0});
+}
 }
 const sortRank={"関連候補":0,"要追加確認":1};results.sort((a,b)=>sortRank[a.state]-sortRank[b.state]||a.id.localeCompare(b.id));
 const usedFields=["gazeBlur","postureStanding","postureWalking","postureTurnLeft","postureTurnRight"].filter(f=>fieldSources[f]);const dateList=[...new Set(usedFields.map(f=>fieldSources[f]))];const sourceNote=usedFields.length?"｜参照評価日："+(dateList.length===1?dateList[0]:dateList.join("・")+"（複数日：項目ごとの直近値を使用）"):"｜4領域評価の参照値なし";status.textContent="29候補中 "+results.filter(x=>x.state==="関連候補").length+"件が関連候補、"+results.filter(x=>x.state==="要追加確認").length+"件が要追加確認。その他は関連性未確認です。※試行可否・採否は未判定"+sourceNote;
 if(!results.length){out.textContent="現時点で関連情報が見つかりません。必要に応じて評価や補足確認を追加してください。";return;}
-for(const item of results){const card=document.createElement("div");card.style.cssText="padding:10px 0;border-top:1px solid #dce7e4;white-space:pre-wrap;overflow-wrap:anywhere";const strong=document.createElement("strong");strong.textContent=item.id+"｜"+item.name+"［"+item.state+"］";const p=document.createElement("div");p.textContent="提示理由："+item.reason+"\n施術者確認："+item.check;card.append(strong,p);out.appendChild(card);}
+for(const item of results){const card=document.createElement("div");card.style.cssText="padding:10px 0;border-top:1px solid #dce7e4;white-space:pre-wrap;overflow-wrap:anywhere";const strong=document.createElement("strong");strong.textContent=item.id+"｜"+item.name+"［"+item.state+"］";const p=document.createElement("div");const refText=item.references.length?item.references.map(x=>x.label+"："+(x.value===null?"未評価":x.value+"［"+x.date+"］")).join("／"):"4領域評価の数値項目による直接参照なし";p.textContent="提示理由："+item.reason+"\n参照した評価："+refText+(item.older?"\n【再確認が必要】最新の評価日より前の記録が含まれます。":"")+"\n施術者確認："+item.check;card.append(strong,p);out.appendChild(card);}
 }catch(e){if(unlocked&&selectedClientNo===no)status.textContent="抽出失敗："+e.message;}
 };
 function closeClientDetail(){selectedClientNo=null;clearSelfcareChecks();clearAssessment();clearSession();document.querySelectorAll("#intake-panel input,#intake-panel textarea,#intake-panel select").forEach(el=>{if(el.type==="checkbox")el.checked=false;else el.value="";});updateIntakeGroups();updateVisitSummaries();document.getElementById("life-goal").value="";document.getElementById("life-goal-status").textContent="";document.getElementById("client-detail").hidden=true;document.getElementById("client-detail-summary").textContent="";}
