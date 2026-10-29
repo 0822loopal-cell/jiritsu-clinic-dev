@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.18｜STEP 195 セルフケア候補の試験抽出</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.19｜STEP 195 A01抽出判定修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -169,7 +169,7 @@ for(const [id,name,q,opts,check] of scCandidateRules){
 const picked=Array.isArray(qs[q])?qs[q]:[];
 const matches=opts.filter(x=>picked.includes(x));
 let state=matches.length?"関連候補":"関連性未確認",reason=matches.length?"補足確認："+q.toUpperCase()+"「"+matches.join("・")+"」":"";
-if(id==="A01"){state="要追加確認";reason="眼球運動そのものの評価項目は未整備";}
+if(id==="A01"){state="関連性未確認";reason="眼球運動自体の課題は未評価";}
 if((id==="A02"||id==="A03")&&matches.length){if(gaze===null){state="要追加確認";reason+="／視界のぶれ評価が未実施";}else if(gaze===0){state="要追加確認";reason+="／視界のぶれ評価は0（課題との関連を確認）";}else reason+="／視界のぶれ："+gaze;}
 if((id==="A02"||id==="A03")&&!matches.length&&gaze!==null&&gaze>0&&!picked.includes("特になし")){state="要追加確認";reason="視界のぶれ："+gaze+"／頭部運動の方向は未確認";}
 const r3={B03:standing,C01:walking,C02:[left,right].some(v=>v!==null&&v>=2)?2:([left,right].some(v=>v!==null)?1:null)};
