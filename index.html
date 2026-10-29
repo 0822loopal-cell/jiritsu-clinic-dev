@@ -224,6 +224,21 @@ function closeClientDetail(){selectedClientNo=null;clearSelfcareChecks();clearSc
 async function openClientDetail(no){if(!unlocked)return;const item=clientListCache.find(x=>x.clientNo===no);if(!item)return;selectedClientNo=no;document.getElementById("client-detail-title").textContent="クライアント概要｜NO "+no;document.getElementById("client-detail-summary").textContent="クライアントNO： "+no+"\n登録区分： 架空クライアント（テスト専用）\n登録日時： "+new Date(item.createdAt).toLocaleString("ja-JP")+"\n生活目標： 未登録\nヒアリング： 未登録\n施術記録： 未登録";document.getElementById("client-detail").hidden=false;document.getElementById("client-detail").scrollIntoView({behavior:"smooth",block:"start"});await loadLifeGoal(no);await loadIntake(no);await loadSelfcareChecks(no);clearScTrial();await loadScTrials(no);clearAssessment();await loadAssessments(no);clearSession();await loadSessions(no);await loadNextVisit(no);}
 document.getElementById("client-back").onclick=()=>{closeClientDetail();document.getElementById("client-search").focus();};
 document.getElementById("client-list").addEventListener("click",event=>{const button=event.target.closest("button[data-client-no]");if(button)openClientDetail(button.dataset.clientNo);});
+function inspectSharedWeek(text,no){
+const found=(name)=>{const line=text.split(/\r?\n/).find(x=>x.trim().startsWith(name+"："));return line?line.trim().slice(name.length+1).trim():"";};
+if(!text.trim())return "週間共有文を貼り付けてください。";
+if(found("データ形式")!=="JIRITSU-WEEKLY-V1")return "共有形式が一致しません。クライアント用アプリで作成した週間サマリーの全文を貼り付けてください。";
+const id=found("クライアントNO"),period=found("集計期間");
+if(!/^[0-9]{4}$/.test(id))return "4桁のクライアントNOが確認できません。";
+if(id!==no)return "クライアントNO不一致：共有文はNO "+id+"、表示中はNO "+no+"。取り込まないでください。";
+const dates=period.split("〜");
+if(dates.length!==2||dates.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x)))return "集計期間を確認できません。";
+const a=Date.parse(dates[0]+"T00:00:00Z"),b=Date.parse(dates[1]+"T00:00:00Z");
+if(!Number.isFinite(a)||!Number.isFinite(b)||b-a!==6*86400000)return "集計期間が7日間ではありません。";
+const headings=["① 記録状況","③ DLT｜症状と生活への影響","④ セルフケア・セルフリハ"];if(headings.some(x=>!text.includes(x)))return "共有文に必要な項目がありません。全文を貼り付けてください。";
+return "形式：確認OK\nクライアントNO："+id+"（一致）\n期間："+period+"（7日間）\n集計週："+(found("集計週")||"未記載")+"\n必要項目：確認OK\n\n※保存していません。次工程で確認済みの内容だけを取り込みます。";
+}
+document.getElementById("weekly-check-button").onclick=()=>{if(!unlocked||!selectedClientNo)return;document.getElementById("weekly-check-output").textContent=inspectSharedWeek(document.getElementById("weekly-check-input").value,selectedClientNo);};
 function nextVisitSummary(data){
 const lines=["【生活目標】",typeof data.lifeGoal==="string"&&data.lifeGoal.trim()?data.lifeGoal.trim():"未登録"];
 const checks=[["① 安静時",["restVertigo","restBalance"]],["② 視線安定",["gazeBlur","gazeRecovery"]],["③ 姿勢・歩行",["postureStanding","postureWalking","postureTurnLeft","postureTurnRight"]],["④ 生活機能",["lifeMinutes","lifeGoalScore"]]];
