@@ -310,7 +310,7 @@ function weeklyTrendOverview(data){
   const part=start>=0?t.slice(start,end>start?end:undefined):"";
   const values={};
   for(const name of names){
-   const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,"\\function weeklyShareOverview(data){");
+   const escaped=name;
    const match=part.match(new RegExp(escaped+"：記録(\\d+)日 \\/ 初回 (\\d+) → 最新 (\\d+)"));
    values[name]=match?{days:Number(match[1]),first:Number(match[2]),last:Number(match[3])}:null;
   }
