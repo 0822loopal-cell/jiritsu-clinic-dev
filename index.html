@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.41｜STEP 204 週間経過・日別記録の画面整理</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.42｜STEP 204 症状別表示の統一</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -221,7 +221,7 @@ for(const item of results){const card=document.createElement("div");card.style.c
 }catch(e){if(unlocked&&selectedClientNo===no)status.textContent="抽出失敗："+e.message;}
 };
 function closeClientDetail(){selectedClientNo=null;clearSelfcareChecks();clearScTrial();clearAssessment();clearSession();document.querySelectorAll("#intake-panel input,#intake-panel textarea,#intake-panel select").forEach(el=>{if(el.type==="checkbox")el.checked=false;else el.value="";});updateIntakeGroups();updateVisitSummaries();document.getElementById("life-goal").value="";document.getElementById("life-goal-status").textContent="";document.getElementById("client-detail").hidden=true;document.getElementById("client-detail-summary").textContent="";document.getElementById("next-visit-content").textContent="クライアントを開くと表示されます。";document.getElementById("weekly-progress-content").textContent="クライアントを開くと表示されます。";document.getElementById("dlt-week-preview-input").value="";document.getElementById("dlt-week-preview-result").textContent="未確認";resetDltWeeklyVerification();}
-async function openClientDetail(no){if(!unlocked)return;const item=clientListCache.find(x=>x.clientNo===no);if(!item)return;selectedClientNo=no;document.getElementById("client-detail-title").textContent="クライアント概要｜NO "+no;document.getElementById("client-detail-summary").textContent="クライアントNO： "+no+"\n登録区分： 架空クライアント（テスト専用）\n登録日時： "+new Date(item.createdAt).toLocaleString("ja-JP")+"\n生活目標： 未登録\nヒアリング： 未登録\n施術記録： 未登録";document.getElementById("client-detail").hidden=false;document.getElementById("client-detail").scrollIntoView({behavior:"smooth",block:"start"});await loadLifeGoal(no);await loadIntake(no);await loadSelfcareChecks(no);clearScTrial();await loadScTrials(no);clearAssessment();await loadAssessments(no);clearSession();await loadSessions(no);await loadNextVisit(no);await loadWeeklyProgress(no);await loadWeeklyDaily(no);await loadWeeklyCharts(no);}
+async function openClientDetail(no){if(!unlocked)return;const item=clientListCache.find(x=>x.clientNo===no);if(!item)return;selectedClientNo=no;document.getElementById("client-detail-title").textContent="クライアント概要｜NO "+no;document.getElementById("client-detail-summary").textContent="クライアントNO： "+no+"\n登録区分： 架空クライアント（テスト専用）\n登録日時： "+new Date(item.createdAt).toLocaleString("ja-JP")+"\n生活目標： 未登録\nヒアリング： 未登録\n施術記録： 未登録";document.getElementById("client-detail").hidden=false;document.getElementById("client-detail").scrollIntoView({behavior:"smooth",block:"start"});await loadLifeGoal(no);await loadIntake(no);await loadSelfcareChecks(no);clearScTrial();await loadScTrials(no);clearAssessment();await loadAssessments(no);clearSession();await loadSessions(no);await loadNextVisit(no);await loadWeeklyProgress(no);await loadWeeklyDaily(no);await loadWeeklyCharts(no);await loadWeeklyProgress(no);await loadWeeklyDaily(no);}
 document.getElementById("client-back").onclick=()=>{closeClientDetail();document.getElementById("client-search").focus();};
 document.getElementById("client-list").addEventListener("click",event=>{const button=event.target.closest("button[data-client-no]");if(button)openClientDetail(button.dataset.clientNo);});
 function inspectWeeklyDailyPayload(raw,period){
@@ -316,10 +316,15 @@ document.getElementById("dlt-week-read-button").onclick=async()=>{
  catch(e){if(unlocked&&activeKey===key)info.textContent="読み取り失敗："+e.message;}
 };
 
+function visibleSymptoms(data){
+ const intake=data.intake;
+ if(intake?.symptomsConfirmed!==true||!Array.isArray(intake.detailGroups))return ["めまい","ふらつき","耳鳴り"];
+ return [["vertigo","めまい"],["balance","ふらつき"],["tinnitus","耳鳴り"]].filter(pair=>intake.detailGroups.includes(pair[0])).map(pair=>pair[1]);
+}
 function weeklyTrendOverview(data){
  const shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.raw==="string"&&typeof x.period==="string").sort((a,b)=>a.period.localeCompare(b.period));
  if(!shares.length)return "週間共有記録は未登録です。";
- const names=["めまい","ふらつき","耳鳴り","日常生活への影響"];
+ const names=[...visibleSymptoms(data),"日常生活への影響"];
  const parse=(share)=>{
   const t=share.raw.replace(/\r\n?/g,"\n"),start=t.indexOf("③ DLT｜症状と生活への影響"),end=t.indexOf("④ セルフケア・セルフリハ");
   const part=start>=0?t.slice(start,end>start?end:undefined):"";
@@ -365,7 +370,7 @@ function weeklyDailyOverview(data){
   let parsed;try{parsed=inspectWeeklyDailyPayload(share.raw,share.period);}catch(e){lines.push(share.period+"：日別データ不正（"+e.message+"）");continue;}
   if(parsed.legacy){lines.push(share.period+"：旧形式のため日別データなし");continue;}
   lines.push("■ "+(share.week||"週未記載")+"｜"+share.period);
-  for(const d of parsed.days)lines.push(d.date+"｜めまい "+(d.dizziness??"―")+"／ふらつき "+(d.unsteadiness??"―")+"／耳鳴り "+(d.tinnitus??"―")+"／生活影響 "+(d.dailyImpact??"―")+"｜セルフケア "+({done:"実施","not-done":"未実施","no-instruction":"指示なし"}[d.selfCare]||"未記録")+(d.response?"（"+({better:"楽になった",same:"変化なし",change:"気になる変化"}[d.response]||"未記録")+"）":""));
+  for(const d of parsed.days)lines.push(d.date+"｜"+[["めまい","dizziness"],["ふらつき","unsteadiness"],["耳鳴り","tinnitus"]].filter(pair=>visibleSymptoms(data).includes(pair[0])).map(pair=>pair[0]+" "+(d[pair[1]]??"―")).concat(["生活影響 "+(d.dailyImpact??"―")]).join("／")+"｜セルフケア "+({done:"実施","not-done":"未実施","no-instruction":"指示なし"}[d.selfCare]||"未記録")+(d.response?"（"+({better:"楽になった",same:"変化なし",change:"気になる変化"}[d.response]||"未記録")+"）":""));
  }
  return lines.join("\n");
 }
@@ -378,7 +383,7 @@ function weeklyShareOverview(data){
  for(const x of sorted.slice(0,4)){
   const normalized=x.raw.replace(/\r\n?/g,"\n");
   const section=(label)=>{const pos=normalized.indexOf(label);return pos<0?"記録なし":normalized.slice(pos+label.length).trimStart().split(/\n\s*\n/)[0].trim();};
-  lines.push("","集計期間："+x.period+"｜"+(x.week||"集計週不明"),"症状・生活への影響："+section("③ DLT｜症状と生活への影響"),"セルフケア："+section("④ セルフケア・セルフリハ"));
+  lines.push("","集計期間："+x.period+"｜"+(x.week||"集計週不明"),"症状・生活への影響："+section("③ DLT｜症状と生活への影響").split(/(?<=。)/).map(sentence=>{let x=sentence;for(const n of ["めまい","ふらつき","耳鳴り"])if(!visibleSymptoms(data).includes(n))x=x.replace(n+"：", "【非表示】"+n+"：");return x;}).join("").replace(/【非表示】(?:めまい|ふらつき|耳鳴り)：[^。]*。/g,"").trim(),"セルフケア："+section("④ セルフケア・セルフリハ"));
  }
  if(sorted.length>4)lines.push("ほか "+(sorted.length-4)+"週分（週間記録一覧で確認予定）");
  return lines.join("\n");
