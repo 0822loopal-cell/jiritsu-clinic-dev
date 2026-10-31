@@ -704,10 +704,10 @@ function renderNextVisitCards(box,data){
    const move=document.createElement("button");move.type="button";move.className="test-action";move.textContent="既存のセルフケア設定・変更記録へ移動";move.style.marginTop="12px";move.onclick=()=>{if(!unlocked||!selectedClientNo)return;const panel=document.getElementById("selfcare-trial-panel");if(!panel)return;panel.scrollIntoView({behavior:"smooth",block:"start"});const h=panel.querySelector("h3");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}};link.append(move);
    box.append(link);
    const action=document.createElement("section");action.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f4f8f6;border:2px solid #6f9c8b;border-radius:10px";
-   const actionTitle=document.createElement("h4");actionTitle.textContent="②-C 来院時の実務要約｜確認からセルフケア再検討へ";actionTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";action.append(actionTitle);
+   const actionTitle=document.createElement("h4");actionTitle.textContent="②-D 来院時の実務要約｜確認からセルフケア再検討へ";actionTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";action.append(actionTitle);
    const actionBody=document.createElement("div");actionBody.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";actionBody.textContent=nextVisitActionBrief(data);action.append(actionBody);box.append(action);
    const comparison=document.createElement("section");comparison.style.cssText="padding:14px 16px;margin:0 0 12px;background:#fff;border:1px solid #9ebcb3;border-radius:10px";
-   const compareTitle=document.createElement("h4");compareTitle.textContent="②-D セルフケア設定変更｜前後の経過比較";compareTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";comparison.append(compareTitle);
+   const compareTitle=document.createElement("h4");compareTitle.textContent="②-C セルフケア設定変更｜前後の経過比較";compareTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";comparison.append(compareTitle);
    const compareText=document.createElement("div");compareText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";compareText.textContent=nextVisitCareBeforeAfter(data);comparison.append(compareText);box.append(comparison);
   }
  }
