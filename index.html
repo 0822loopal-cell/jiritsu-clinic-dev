@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.93｜STEP 278 準備・当日の状態接続</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.94｜STEP 280 施術・セルフケア工程接続</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -257,6 +257,13 @@ function ongoingMoveField(id,to){
  if(id==="session-date"){const info=document.getElementById("session-visit-link");if(info)nodes.push(info);}
  for(const node of nodes){const marker=document.createComment("ongoing-original-"+id);node.parentNode.insertBefore(marker,node);ongoingMoved.push({node,marker});to.appendChild(node);}
 }
+function ongoingMovePanel(id,to){
+ const node=document.getElementById(id);if(!node)return;
+ const marker=document.createComment("ongoing-original-panel-"+id);
+ node.parentNode.insertBefore(marker,node);
+ ongoingMoved.push({node,marker});
+ to.appendChild(node);
+}
 async function ongoingShowPreparation(root){
  const no=selectedClientNo,key=activeKey;if(!unlocked||!key||!no)return;
  const contents=document.createElement("div");contents.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7";contents.textContent="保存済みの情報を読み込み中…";root.appendChild(contents);
@@ -273,7 +280,16 @@ function renderOngoingWorkspace(){
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
  for(const id of ["session-date","session-visitState","session-sinceLast","session-priority"])ongoingMoveField(id,root);
  const note=document.createElement("p");note.textContent="既存の入力欄をそのまま表示しています。工程切替では保存されません。";note.style.fontSize=".85rem";root.appendChild(note);
- }else{const note=document.createElement("p");note.textContent="この工程の既存入力・保存機能は次のSTEP以降に接続します。";note.style.fontSize=".85rem";root.appendChild(note);}
+ }else if(ongoingStep===2){
+ const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
+ for(const id of ["session-interventions","session-response","session-reevaluation"])ongoingMoveField(id,root);
+ const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
+ }else if(ongoingStep===3){
+ const note=document.createElement("p");note.textContent="既存のセルフケア試行・採否・個別設定・履歴をそのまま利用します。セルフケア管理の保存は各機能の保存ボタンで行います。";note.style.fontSize=".85rem";root.appendChild(note);
+ ongoingMovePanel("selfcare-trial-panel",root);
+ const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
+ ongoingMoveField("session-selfcare",root);
+ }else{const note=document.createElement("p");note.textContent="申し送り・保存の接続は次のSTEPで実装します。";note.style.fontSize=".85rem";root.appendChild(note);}
  document.querySelectorAll("#ongoing-workspace-tabs [data-ongoing-step]").forEach(button=>{const active=Number(button.dataset.ongoingStep)===ongoingStep;button.setAttribute("aria-pressed",String(active));button.style.background=active?"#d9eee5":"";button.style.borderColor=active?"#487d6b":"";});
  document.getElementById("ongoing-workspace-prev").disabled=ongoingStep===0;document.getElementById("ongoing-workspace-next").disabled=ongoingStep===ongoingStages.length-1;
 }document.getElementById("ongoing-workspace-open").addEventListener("click",()=>{if(!unlocked||!selectedClientNo)return;ongoingStep=0;document.getElementById("ongoing-workspace").hidden=false;renderOngoingWorkspace();document.getElementById("ongoing-workspace").scrollIntoView({behavior:"smooth",block:"start"});});document.getElementById("ongoing-workspace-tabs").addEventListener("click",event=>{const button=event.target.closest("button[data-ongoing-step]");if(!button)return;ongoingStep=Number(button.dataset.ongoingStep);renderOngoingWorkspace();});document.getElementById("ongoing-workspace-prev").addEventListener("click",()=>{if(ongoingStep>0){ongoingStep--;renderOngoingWorkspace();}});document.getElementById("ongoing-workspace-next").addEventListener("click",()=>{if(ongoingStep<ongoingStages.length-1){ongoingStep++;renderOngoingWorkspace();}});document.getElementById("ongoing-workspace-close").addEventListener("click",()=>{ongoingRestoreFields();document.getElementById("ongoing-workspace").hidden=true;});document.getElementById("client-jump-nav").addEventListener("click",handleClientJump);document.getElementById("client-workflow-nav").addEventListener("click",handleClientJump);function handleWorkflowJump(event){const button=event.target.closest("button[data-workflow-target]");if(!button||!unlocked||!selectedClientNo)return;const target=document.getElementById(button.dataset.workflowTarget);if(!target)return;target.scrollIntoView({behavior:"smooth",block:"start"});}document.getElementById("session-panel").addEventListener("click",handleWorkflowJump);document.getElementById("selfcare-trial-panel").addEventListener("click",handleWorkflowJump);
