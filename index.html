@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.74｜STEP 236 生活・体感・カメラ日別データ連携</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.75｜STEP 237 来院時の重点確認ポイント抽出</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -429,6 +429,49 @@ function nextVisitWeeklyDigest(data){
  lines.push("※週末の記録値の比較です。詳細は「週間経過・日別記録」を参照。");
  return lines.join("\n");
 }
+function nextVisitFocusPoints(days,chosen){
+ if(!Array.isArray(days)||!days.length)return ["日別データがありません。週間集計と来院時の聞き取りで確認してください。"];
+ const items=[];
+ const add=(priority,date,headline,details,question)=>items.push({priority,date,headline,details,question});
+ const names=chosen.map(([field,label])=>({field,label}));
+ const symptomValues=d=>names.filter(x=>Number.isInteger(d[x.field])).map(x=>({name:x.label,value:d[x.field]}));
+ const scoreSignature=d=>symptomValues(d).map(x=>x.name+" "+x.value).join("／")||"症状・生活影響の記録なし";
+ for(let i=0;i<days.length;i++){
+  const day=days[i],prev=i?days[i-1]:null,vals=symptomValues(day),prior=prev?symptomValues(prev):[];
+  const changes=vals.filter(v=>prior.some(p=>p.name===v.name&&v.value>p.value)).map(v=>{const p=prior.find(x=>x.name===v.name);return v.name+" "+p.value+"→"+v.value;});
+  if(changes.length)add(1,day.date,"負担の増加",changes.join("／"),"増えた項目の生活場面・動作・負荷を確認");
+  if(day.selfCare==="done"&&day.response==="change")add(1,day.date,"セルフケア実施後の気になる変化","本人が「気になる変化」と記録","実施メニュー・回数・直後の状態・回復時間を優先確認");
+  const lowCondition=typeof day.life?.condition==="string"&&/良くない|悪い|不調/.test(day.life.condition);
+  const lowSleep=typeof day.life?.sleep==="string"&&/眠れない|寝不足|悪い/.test(day.life.sleep);
+  const missed=day.selfCare==="not-done";
+  if((lowCondition&&lowSleep)||(missed&&(lowCondition||lowSleep))){
+   const facts=[lowSleep?"睡眠「"+day.life.sleep+"」":null,lowCondition?"体感「"+day.life.condition+"」":null,missed?"セルフケア未実施":null].filter(Boolean);
+   add(2,day.date,"生活・体感・実施状況の重なり",facts.join("／")+"／"+scoreSignature(day),"未実施や不調の背景（休息・活動・負荷）を聞き取る");
+  }else if(missed)add(2,day.date,"セルフケア未実施","未実施／"+scoreSignature(day),"実施できなかった理由と続けやすい条件を確認");
+ }
+ const comparisons=[];
+ for(let i=0;i<days.length;i++){
+  const day=days[i],v=symptomValues(day);
+  if(day.selfCare!=="done"||day.response!=="better"||!v.length)continue;
+  const same=[day];for(let j=i+1;j<days.length;j++){
+   const other=days[j],ov=symptomValues(other);
+   if(other.selfCare!=="done"||other.response!=="better"||ov.length!==v.length||ov.some(x=>!v.some(t=>t.name===x.name&&t.value===x.value)))break;
+   same.push(other);
+  }
+  if(same.length>=2)comparisons.push({start:i,end:i+same.length-1,days:same}); 
+ }
+ if(comparisons.length){
+  comparisons.sort((a,b)=>b.days.length-a.days.length||a.start-b.start);
+  const win=comparisons[0],from=win.days[0],to=win.days[win.days.length-1];
+  add(3,from.date,"比較対象となる期間",from.date+"〜"+to.date+"（"+win.days.length+"日）／ケア実施・実施後「楽になった」／"+scoreSignature(from),"実施メニュー・負荷・生活状況の共通点を確認。セルフケアによる変化と断定しない");
+ }
+ items.sort((a,b)=>a.priority-b.priority||a.date.localeCompare(b.date));
+ const result=items.slice(0,5).map((x,i)=>(i+1)+"．"+x.date+"｜"+x.headline+"\n  記録："+x.details+"\n  確認："+x.question);
+ if(items.length>5)result.push("ほか"+(items.length-5)+"件の候補あり。詳細は日付別照合を参照");
+ if(!result.length)result.push("突出した重なり・負担増加はこの7日間から抽出されませんでした。生活目標と継続条件を通常どおり確認してください。");
+ result.push("※重点候補は記録された事実に基づく聞き取りの優先順です。原因やセルフケアの効果を自動判定しません。カメラ測定値は同日の照合で確認し、数値のみで優先度を決めません。");
+ return result;
+}
 function nextVisitCareReview(data){
  const shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.raw==="string"&&typeof x.period==="string").sort((a,b)=>b.period.localeCompare(a.period));
  if(!shares.length)return "共有された週間データがありません。次回は本人の生活状況・症状・セルフケア実施状況を確認してください。";
@@ -463,6 +506,7 @@ function nextVisitCareReview(data){
    rows.push(d.date+"｜"+scores+"｜ケア "+care+"｜"+life+"｜"+camera);
   }
  }
+ if(daily)rows.push("","【重点確認ポイント｜日別データから抽出】",...nextVisitFocusPoints(daily,chosen));
  rows.push("","【来院時に確認すること】");
  if(!life||life.includes("記録 0日"))rows.push("・睡眠・活動・本人の体感を聞き取り、記録のない項目は推測しない");
  else rows.push("・体感が変わった日と、睡眠・活動・ふらつき等の変化が重なるか本人に確認");
