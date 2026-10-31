@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.78｜STEP 240 セルフケア設定変更前後の経過比較</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.79｜STEP 241 変更前後の経過要約</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -581,35 +581,50 @@ function nextVisitCarePlanLink(data){
  return rows.join("\n");
 }
 function nextVisitCareBeforeAfter(data){
- const changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]).filter(c=>c&&c.item&&/^\d{4}-\d{2}-\d{2}$/.test(c.date||"")).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
- if(!changes.length)return "個別設定の変更履歴はありません。設定を変更してから比較対象を確認できます。";
- const records=new Map(),shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.raw==="string"&&typeof x.period==="string").sort((a,b)=>String(a.period).localeCompare(String(b.period)));
+ const changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]).filter(c=>c?.item&&/^\d{4}-\d{2}-\d{2}$/.test(c.date||"")).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
+ if(!changes.length)return "セルフケアの設定変更履歴がありません。変更前後の経過比較はまだできません。";
+ const latest=changes[0],start=Date.parse(latest.date+"T00:00:00Z"),dayMs=86400000;
+ if(!Number.isFinite(start)||new Date(start).toISOString().slice(0,10)!==latest.date)return "設定変更日を確認できません。";
+ const records=new Map(),shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>typeof x?.raw==="string"&&typeof x.period==="string").sort((a,b)=>a.period.localeCompare(b.period));
  for(const share of shares){try{const parsed=inspectWeeklyDailyPayload(share.raw,share.period);if(parsed.days)for(const day of parsed.days)records.set(day.date,day);}catch{}}
- const latest=changes[0],dayMs=86400000,start=Date.parse(latest.date+"T00:00:00Z");
- if(!Number.isFinite(start))return "設定変更日を確認できません。";
- const windowDays=(offset)=>Array.from({length:7},(_,i)=>records.get(new Date(start+(offset+i)*dayMs).toISOString().slice(0,10))).filter(Boolean);
- const before=windowDays(-7),after=windowDays(1);
- const lines=["【設定変更の基準】",latest.item+"｜"+scTrialName(latest.item),"変更日："+latest.date,"変更前："+(latest.before||"記録なし"),"変更後："+(latest.after||"記録なし"),"変更理由："+(latest.reason||"記録なし"),"比較窓：変更日を除く前7日・後7日。欠測は補完しません。"];
- const otherChanges=changes.filter(x=>x!==latest&&x.item===latest.item&&x.date>=new Date(start-7*dayMs).toISOString().slice(0,10));
- if(otherChanges.length)lines.push("※比較窓内に同じメニューの別の設定変更があるため、単純な変更前後比較には注意が必要です。");
- const detail=(label,days)=>{const out=["","【"+label+"】","日別データがある日："+days.length+"/7日"];const nums=[["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"],["dailyImpact","生活への影響"]];
-  for(const [field,name] of nums){const values=days.map(d=>d[field]).filter(v=>Number.isInteger(v)&&v>=0&&v<=4);out.push(name+"："+(values.length?"平均"+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(2)+"（"+values.length+"日）":"比較できる値なし"));}
-  const care=days.filter(d=>["done","not-done","no-instruction"].includes(d.selfCare));out.push("セルフケア：実施"+care.filter(d=>d.selfCare==="done").length+"日／未実施"+care.filter(d=>d.selfCare==="not-done").length+"日（記録"+care.length+"日）");
-  out.push("実施後「楽になった」："+days.filter(d=>d.selfCare==="done"&&d.response==="better").length+"日");
-  const life=days.filter(d=>d.life&&Object.values(d.life).some(Boolean));out.push("睡眠・体感・活動：記録"+life.length+"日"+(life.length?"／体感："+life.map(d=>d.life.condition).filter(Boolean).join(" → "):""));
-  const camera=days.filter(d=>d.camera?.status==="valid");out.push("カメラ：有効"+camera.length+"日");
-  for(const [field,name,unit] of [["hr","HR"," bpm"],["rmssd","RMSSD"," ms"],["sdnn","SDNN"," ms"]]){const values=camera.map(d=>d.camera[field]).filter(v=>typeof v==="number"&&Number.isFinite(v));out.push(name+"："+(values.length?"平均"+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1)+unit+"（"+values.length+"日）":"比較できる値なし"));}
-  return out;
+ const dateAt=n=>new Date(start+n*dayMs).toISOString().slice(0,10);
+ const collect=offset=>Array.from({length:7},(_,i)=>records.get(dateAt(offset+i))).filter(Boolean);
+ const before=collect(-7),after=collect(1);
+ const score=(days,k)=>{const v=days.map(d=>d[k]).filter(x=>Number.isInteger(x)&&x>=0&&x<=4);return v.length?{value:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;};
+ const camera=(days,k)=>{const v=days.filter(d=>d.camera?.status==="valid").map(d=>d.camera[k]).filter(x=>typeof x==="number"&&Number.isFinite(x));return v.length?{value:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;};
+ const fmt=(v,digits=2)=>v?v.value.toFixed(digits)+"（"+v.n+"日）":"記録なし";
+ const brief=(label,days)=>{
+  if(!days.length)return ["【"+label+"】","記録なし（0/7日）。数値は集計しません。"];
+  const result=["【"+label+"】","日別記録："+days.length+"/7日"];
+  const values=[["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"],["dailyImpact","生活への影響"]].map(([k,name])=>{const v=score(days,k);return v?name+" "+fmt(v):null;}).filter(Boolean);
+  result.push("症状・生活影響："+(values.join("／")||"数値記録なし"));
+  const cared=days.filter(d=>["done","not-done","no-instruction"].includes(d.selfCare));
+  result.push("セルフケア：実施"+cared.filter(d=>d.selfCare==="done").length+"日／未実施"+cared.filter(d=>d.selfCare==="not-done").length+"日（記録"+cared.length+"日）、実施後「楽になった」"+days.filter(d=>d.selfCare==="done"&&d.response==="better").length+"日");
+  const feelings=days.map(d=>d.life?.condition).filter(Boolean);
+  result.push("生活・体感："+(feelings.length?feelings[0]+" → "+feelings[feelings.length-1]+"（"+feelings.length+"日）":"日別記録なし"));
+  const cameraValues=[["hr","HR","bpm"],["rmssd","RMSSD","ms"],["sdnn","SDNN","ms"]].map(([k,name,unit])=>{const v=camera(days,k);return v?name+" "+fmt(v,1)+unit:null;}).filter(Boolean);
+  result.push("カメラ測定："+(cameraValues.join("／")||"有効値なし"));
+  return result;
  };
- lines.push(...detail("変更前7日",before),...detail("変更後7日",after));
- if(before.length&&after.length){
-  lines.push("","【比較できる項目】");
-  for(const [field,name] of [["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"],["dailyImpact","生活への影響"]]){
-   const a=before.map(d=>d[field]).filter(v=>Number.isInteger(v)&&v>=0&&v<=4),b=after.map(d=>d[field]).filter(v=>Number.isInteger(v)&&v>=0&&v<=4);
-   lines.push(name+"："+(a.length&&b.length?"前平均"+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2)+"（"+a.length+"日）→ 後平均"+(b.reduce((x,y)=>x+y,0)/b.length).toFixed(2)+"（"+b.length+"日）":"比較可能な共通値なし"));
-  }
- }else lines.push("","【比較状況】","変更"+(!before.length?"前":"後")+"の7日間に日別データがないため、変更前後の数値比較は保留します。");
- lines.push("","【来院時に活用する確認事項】","・変更したメニューを、変更前後に本人が実際に実施していたか確認する。週間セルフケア記録は全メニュー合算です。","・生活条件・休息・他の支援内容の変化を確認し、数値の変化を設定変更の効果と断定しない。","・今回の結果を踏まえて継続・調整・保留を判断したら、既存のセルフケア設定・施術記録に残す。","※変更前後の窓は変更日を除く各7日。記録がない日は補完せず、記録数を併記します。");
+ const lines=["【設定変更の基準】",latest.item+"｜"+scTrialName(latest.item),"変更日："+latest.date,"変更前："+(latest.before||"記録なし"),"変更後："+(latest.after||"記録なし"),"理由："+(latest.reason||"記録なし"),"比較期間：変更前 "+dateAt(-7)+"〜"+dateAt(-1)+"／変更後 "+dateAt(1)+"〜"+dateAt(7)+"（変更日を除外）"];
+ const otherChanges=changes.filter(x=>x!==latest&&x.item===latest.item&&x.date>=dateAt(-7)&&x.date<=dateAt(7));
+ if(otherChanges.length)lines.push("※比較期間内に同じメニューの別の設定変更があります。");
+ if(!before.length||!after.length){
+  lines.push("","【比較状況】","変更前 "+before.length+"/7日／変更後 "+after.length+"/7日。両期間の数値比較はできません。");
+  if(before.length)lines.push("",...brief("変更前の経過",before));
+  if(after.length)lines.push("",...brief("変更後の経過",after));
+  lines.push("","【来院時の重点確認】","・変更後、"+latest.item+"を実際に行ったか、回数・負荷・支持物・時間帯・反応を確認する。","・セルフケア未実施日や体感が低い日の休息・活動条件を確認する。","・変更前の実施時の負担を本人に聞き取り、継続・調整・保留を検討する。");
+ }else{
+  lines.push("","【変更前後の経過】","変更前 "+before.length+"/7日／変更後 "+after.length+"/7日。欠測は補完しません。");
+  for(const [k,name] of [["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"],["dailyImpact","生活への影響"]]){const x=score(before,k),y=score(after,k);if(x&&y)lines.push(name+"：前 "+fmt(x)+" → 後 "+fmt(y));}
+  const done=days=>days.filter(d=>d.selfCare==="done").length;
+  lines.push("セルフケア実施：前 "+done(before)+"日 → 後 "+done(after)+"日（各期間の記録日数に注意）");
+  for(const [k,name,unit] of [["hr","HR","bpm"],["rmssd","RMSSD","ms"],["sdnn","SDNN","ms"]]){const x=camera(before,k),y=camera(after,k);if(x&&y)lines.push(name+"：前 "+fmt(x,1)+unit+" → 後 "+fmt(y,1)+unit);}
+  const lifeBefore=before.map(d=>d.life?.condition).filter(Boolean).length,lifeAfter=after.map(d=>d.life?.condition).filter(Boolean).length;
+  if(lifeBefore&&lifeAfter)lines.push("生活・体感：前"+lifeBefore+"日／後"+lifeAfter+"日（詳細は②-Aの日付別照合）");
+  lines.push("","【来院時の重点確認】","・変更前後の生活条件・症状・実施状況の違いを聞き取る。","・"+latest.item+"の実施回数・負荷・反応・回復時間を確認する。","・生活目標に照らし、現状を継続・調整・保留するか判断する。");
+ }
+ lines.push("※週間の実施・反応記録はセルフケア全体の情報で、個別メニューの効果を示すものではありません。判断は既存のセルフケア管理・施術記録に保存してください。");
  return lines.join("\n");
 }
 function renderNextVisitCards(box,data){
