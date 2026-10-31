@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.98｜STEP 288 ⑤で保存結果・履歴確認</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.99｜STEP 289 作成中記録の色分け</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -288,7 +288,7 @@ async function ongoingShowSavedSessionAudit(container){
   if(!sessions.length){const empty=document.createElement("p");empty.textContent="保存済み記録はありません。";container.appendChild(empty);return;}
   for(let i=sessions.length-1;i>=0;i--){
    const item=sessions[i],details=document.createElement("details"),heading=document.createElement("summary");
-   details.style.cssText="padding:9px;border-top:1px solid #dce7e4";
+   details.style.cssText="padding:9px;border-top:1px solid #dce7e4"+(item.status==="complete"?"":";background:#fff9ed;border-left:3px solid #bc863d");
    heading.style.cursor="pointer";
    heading.textContent="記録 "+(i+1)+"｜"+(item.date||"日付なし")+"｜"+(item.status==="complete"?"完了":"作成中")+"｜更新："+(item.updatedAt||item.savedAt?new Date(item.updatedAt||item.savedAt).toLocaleString("ja-JP"):"不明");
    details.appendChild(heading);
