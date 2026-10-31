@@ -581,7 +581,7 @@ function nextVisitCarePlanLink(data){
  return rows.join("\n");
 }
 function nextVisitCareBeforeAfter(data){
- const changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]).filter(c=>c&&c.item&&/^\\d{4}-\\d{2}-\\d{2}$/.test(c.date||"")).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
+ const changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]).filter(c=>c&&c.item&&/^\d{4}-\d{2}-\d{2}$/.test(c.date||"")).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
  if(!changes.length)return "個別設定の変更履歴はありません。設定を変更してから比較対象を確認できます。";
  const records=new Map(),shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.raw==="string"&&typeof x.period==="string").sort((a,b)=>String(a.period).localeCompare(String(b.period)));
  for(const share of shares){try{const parsed=inspectWeeklyDailyPayload(share.raw,share.period);if(parsed.days)for(const day of parsed.days)records.set(day.date,day);}catch{}}
