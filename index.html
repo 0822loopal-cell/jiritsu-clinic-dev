@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.94｜STEP 280 施術・セルフケア工程接続</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.95｜STEP 282 申し送り・保存工程接続</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -289,7 +289,13 @@ function renderOngoingWorkspace(){
  ongoingMovePanel("selfcare-trial-panel",root);
  const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
  ongoingMoveField("session-selfcare",root);
- }else{const note=document.createElement("p");note.textContent="申し送り・保存の接続は次のSTEPで実装します。";note.style.fontSize=".85rem";root.appendChild(note);}
+ }else if(ongoingStep===4){
+ const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
+ const date=document.createElement("p");date.textContent="対象来院日："+(document.getElementById("session-date").value||"未設定");root.appendChild(date);
+ ongoingMoveField("session-next",root);
+ const note=document.createElement("p");note.textContent="ここでの保存操作は既存の施術・サポート記録を保存・更新します。セルフケアの採否や個別設定は④の各保存ボタンで管理します。";note.style.fontSize=".85rem";root.appendChild(note);
+ for(const id of ["session-save","session-complete","session-new","session-status"])ongoingMovePanel(id,root);
+ }
  document.querySelectorAll("#ongoing-workspace-tabs [data-ongoing-step]").forEach(button=>{const active=Number(button.dataset.ongoingStep)===ongoingStep;button.setAttribute("aria-pressed",String(active));button.style.background=active?"#d9eee5":"";button.style.borderColor=active?"#487d6b":"";});
  document.getElementById("ongoing-workspace-prev").disabled=ongoingStep===0;document.getElementById("ongoing-workspace-next").disabled=ongoingStep===ongoingStages.length-1;
 }document.getElementById("ongoing-workspace-open").addEventListener("click",()=>{if(!unlocked||!selectedClientNo)return;ongoingStep=0;document.getElementById("ongoing-workspace").hidden=false;renderOngoingWorkspace();document.getElementById("ongoing-workspace").scrollIntoView({behavior:"smooth",block:"start"});});document.getElementById("ongoing-workspace-tabs").addEventListener("click",event=>{const button=event.target.closest("button[data-ongoing-step]");if(!button)return;ongoingStep=Number(button.dataset.ongoingStep);renderOngoingWorkspace();});document.getElementById("ongoing-workspace-prev").addEventListener("click",()=>{if(ongoingStep>0){ongoingStep--;renderOngoingWorkspace();}});document.getElementById("ongoing-workspace-next").addEventListener("click",()=>{if(ongoingStep<ongoingStages.length-1){ongoingStep++;renderOngoingWorkspace();}});document.getElementById("ongoing-workspace-close").addEventListener("click",()=>{ongoingRestoreFields();document.getElementById("ongoing-workspace").hidden=true;});document.getElementById("client-jump-nav").addEventListener("click",handleClientJump);document.getElementById("client-workflow-nav").addEventListener("click",handleClientJump);function handleWorkflowJump(event){const button=event.target.closest("button[data-workflow-target]");if(!button||!unlocked||!selectedClientNo)return;const target=document.getElementById(button.dataset.workflowTarget);if(!target)return;target.scrollIntoView({behavior:"smooth",block:"start"});}document.getElementById("session-panel").addEventListener("click",handleWorkflowJump);document.getElementById("selfcare-trial-panel").addEventListener("click",handleWorkflowJump);
