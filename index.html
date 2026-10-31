@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.08</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.09</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1073,7 +1073,7 @@ function renderClientList(){
  const el=document.getElementById("client-list"),q=document.getElementById("client-search").value.trim();
  const pager=document.getElementById("client-pagination"),prev=document.getElementById("client-page-prev"),next=document.getElementById("client-page-next"),label=document.getElementById("client-page-status");
  if(!unlocked)return;
- if(q&&!/^\\d{1,4}$/.test(q)){el.textContent="クライアントNOは半角数字4桁以内で入力してください。";pager.hidden=true;return;}
+ if(q&&!/^\d{1,4}$/.test(q)){el.textContent="クライアントNOは半角数字4桁以内で入力してください。";pager.hidden=true;return;}
  const matched=q?clientListCache.filter(x=>x.clientNo.startsWith(q)):clientListCache;
  el.replaceChildren();
  if(!matched.length){el.textContent=q?"該当する架空クライアントはありません。":"登録済みの架空クライアントはありません。";pager.hidden=true;return;}
