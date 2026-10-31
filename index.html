@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.72｜STEP 234 来院時の4領域週間データ照合</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.73｜STEP 235 週間経過からセルフケア再検討へ</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -423,6 +423,50 @@ function nextVisitWeeklyDigest(data){
  lines.push("※週末の記録値の比較です。詳細は「週間経過・日別記録」を参照。");
  return lines.join("\n");
 }
+function nextVisitCareReview(data){
+ const shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.raw==="string"&&typeof x.period==="string").sort((a,b)=>b.period.localeCompare(a.period));
+ if(!shares.length)return "共有された週間データがありません。次回は本人の生活状況・症状・セルフケア実施状況を確認してください。";
+ const latest=shares[0],prior=shares[1];
+ const section=(x,title)=>{if(!x)return "";const raw=x.raw.replace(/\r\n?/g,"\n"),i=raw.indexOf(title);return i<0?"":raw.slice(i+title.length).trimStart().split(/\n\s*\n/)[0].trim();};
+ const life=section(latest,"② 生活と体感の推移"),camera=section(latest,"⑤ カメラ測定値"),care=section(latest,"④ セルフケア・セルフリハ");
+ const rows=[];
+ let daily=null;try{const parsed=inspectWeeklyDailyPayload(latest.raw,latest.period);daily=parsed.days;}catch{}
+ const known=daily?daily.filter(d=>["done","not-done","no-instruction"].includes(d.selfCare)):[];
+ const performed=known.filter(d=>d.selfCare==="done"),undone=known.filter(d=>d.selfCare==="not-done");
+ const better=performed.filter(d=>d.response==="better"),change=performed.filter(d=>d.response==="change");
+ const symptomNames=[["dizziness","めまい","vertigo"],["unsteadiness","ふらつき","balance"],["tinnitus","耳鳴り","tinnitus"],["dailyImpact","生活への影響",null]];
+ const selected=visibleSymptoms(data),chosen=symptomNames.filter(x=>!x[2]||selected.includes(x[1]));
+ const score=d=>chosen.filter(x=>Number.isInteger(d[x[0]])).map(x=>d[x[0]]);
+ const dailyScores=daily?daily.map(d=>{const a=score(d);return {date:d.date,value:a.length?a.reduce((n,v)=>n+v,0)/a.length:null,care:d.selfCare,response:d.response};}).filter(x=>x.value!==null):[];
+ const sequence=(arr)=>arr.length>1?arr[0].value.toFixed(1)+" → "+arr[arr.length-1].value.toFixed(1):arr.length?arr[0].value.toFixed(1):"記録なし";
+ rows.push("【確認できた経過】","対象："+(latest.week||"週未記載")+"｜"+latest.period);
+ if(daily){rows.push("DLT・生活影響（記録のある項目の平均、0〜4）："+sequence(dailyScores)+" ※参考表示。各項目の違いは週間経過で確認");}
+ else rows.push("DLT・生活影響：日別比較なし。症状別の推移は週間経過で確認");
+ rows.push("セルフケア："+(daily?"実施"+performed.length+"日／未実施"+undone.length+"日／指示なし"+known.filter(d=>d.selfCare==="no-instruction").length+"日":"週間共有文："+(care||"未記録")));
+ if(daily)rows.push("実施後の本人申告：楽になった"+better.length+"日／気になる変化"+change.length+"日");
+ rows.push("生活・体感："+(life||"共有項目なし"),"カメラ測定："+(camera||"共有項目なし"));
+ if(prior){const consecutive=Date.parse(latest.period.split("〜")[0])-Date.parse(prior.period.split("〜")[0])===7*86400000;rows.push("前週との比較："+(consecutive?"連続した2週。上の「直近の週間経過」で各項目を確認":"期間が連続しないため経過比較は保留"));}
+ rows.push("","【来院時に確認すること】");
+ if(!life||life.includes("記録 0日"))rows.push("・睡眠・活動・本人の体感を聞き取り、記録のない項目は推測しない");
+ else rows.push("・体感が変わった日と、睡眠・活動・ふらつき等の変化が重なるか本人に確認");
+ if(!camera||camera.includes("測定がない"))rows.push("・カメラ測定の欠測・測定条件を確認。数値がない場合は生活・症状の記録を優先");
+ else rows.push("・HR・RMSSD・SDNNを測定条件と本人内の過去値に照らして確認。単独で回復度を判定しない");
+ if(!daily)rows.push("・セルフケアの実施日・実施後の反応を聞き取り、継続できなかった理由を確認");
+ else{
+  if(undone.length)rows.push("・未実施"+undone.length+"日の理由（時間・負担・体調）を確認");
+  if(change.length)rows.push("・実施後に気になる変化があった"+change.length+"日の動作・負荷・回復時間を優先して確認");
+  if(better.length)rows.push("・楽になった"+better.length+"日の実施メニュー・時間帯・負荷を確認（効果の断定はしない）");
+  const sameDate=dailyScores.filter(d=>d.care==="done"),noDate=dailyScores.filter(d=>d.care==="not-done");
+  if(sameDate.length&&noDate.length)rows.push("・実施日と未実施日の症状・生活影響を比べ、生活条件の違いも聞き取る");
+  if(!rows.some(x=>x.startsWith("・未実施")||x.startsWith("・実施後")||x.startsWith("・楽になった")))rows.push("・実施したセルフケアの種類・設定・日常での行いやすさを確認");
+ }
+ rows.push("","【セルフケア再検討の視点（施術者が決定）】",
+ "・継続：本人の負担が許容範囲で、生活目標と整合しているか",
+ "・調整：実施タイミング・回数・負荷・休息を変える必要があるか",
+ "・変更／保留：気になる反応や実施困難があれば、メニュー・安全条件を見直すか",
+ "・次回評価：調整した内容を施術記録・セルフケア管理に記録し、次の週間経過と照合");
+ return rows.join("\n");
+}
 function nextVisitSummary(data){
 const lines=["【生活目標】",typeof data.lifeGoal==="string"&&data.lifeGoal.trim()?data.lifeGoal.trim():"未登録"];
 const checks=[["① 安静時",["restVertigo","restBalance"]],["② 視線安定",["gazeBlur","gazeRecovery"]],["③ 姿勢・歩行",["postureStanding","postureWalking","postureTurnLeft","postureTurnRight"]],["④ 生活機能",["lifeMinutes","lifeGoalScore"]]];
@@ -463,6 +507,12 @@ function renderNextVisitCards(box,data){
    section.append(hint);
   }
   box.append(section);
+  if(key==="【直近の週間経過｜来院時チェック】"){
+   const review=document.createElement("section");review.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f8fbfa;border:2px solid #9ebcb3;border-radius:10px";
+   const title=document.createElement("h4");title.textContent="②-A 週間データを活かす｜セルフケア再検討";title.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";review.append(title);
+   const body=document.createElement("div");body.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";body.textContent=nextVisitCareReview(data);review.append(body);
+   box.append(review);
+  }
  }
  const footer=document.createElement("p");footer.style.cssText="font-size:12px;color:#607575;margin:4px 0 0";footer.textContent="保存済み記録を整理して表示しています。未評価・未入力は自動判定ではありません。";box.append(footer);
 }
