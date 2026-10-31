@@ -749,15 +749,15 @@ function renderNextVisitCards(box,data){
    const content=document.createElement("div");content.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";content.textContent=nextVisitCarePlanLink(data);link.append(content);
    const move=document.createElement("button");move.type="button";move.className="test-action";move.textContent="既存のセルフケア設定・変更記録へ移動";move.style.marginTop="12px";move.onclick=()=>{if(!unlocked||!selectedClientNo)return;const panel=document.getElementById("selfcare-trial-panel");if(!panel)return;panel.scrollIntoView({behavior:"smooth",block:"start"});const h=panel.querySelector("h3");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}};link.append(move);
    box.append(link);
-   const goalSection=document.createElement("section");goalSection.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f7faf7;border:2px solid #7fa897;border-radius:10px";
-   const goalHeading=document.createElement("h4");goalHeading.textContent="②-E 生活目標を起点としたセルフケア再検討";goalHeading.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";goalSection.append(goalHeading);
-   const goalText=document.createElement("div");goalText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";goalText.textContent=nextVisitGoalActivityReview(data);goalSection.append(goalText);box.append(goalSection);
    const action=document.createElement("section");action.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f4f8f6;border:2px solid #6f9c8b;border-radius:10px";
    const actionTitle=document.createElement("h4");actionTitle.textContent="②-D 来院時の実務要約｜確認からセルフケア再検討へ";actionTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";action.append(actionTitle);
    const actionBody=document.createElement("div");actionBody.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";actionBody.textContent=nextVisitActionBrief(data);action.append(actionBody);box.append(action);
    const comparison=document.createElement("section");comparison.style.cssText="padding:14px 16px;margin:0 0 12px;background:#fff;border:1px solid #9ebcb3;border-radius:10px";
    const compareTitle=document.createElement("h4");compareTitle.textContent="②-C セルフケア設定変更｜前後の経過比較";compareTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";comparison.append(compareTitle);
    const compareText=document.createElement("div");compareText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";compareText.textContent=nextVisitCareBeforeAfter(data);comparison.append(compareText);box.append(comparison);
+   const goalSection=document.createElement("section");goalSection.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f7faf7;border:2px solid #7fa897;border-radius:10px";
+   const goalHeading=document.createElement("h4");goalHeading.textContent="②-E 生活目標を起点としたセルフケア再検討";goalHeading.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";goalSection.append(goalHeading);
+   const goalText=document.createElement("div");goalText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";goalText.textContent=nextVisitGoalActivityReview(data);goalSection.append(goalText);box.append(goalSection);
   }
  }
  const footer=document.createElement("p");footer.style.cssText="font-size:12px;color:#607575;margin:4px 0 0";footer.textContent="保存済み記録を整理して表示しています。未評価・未入力は自動判定ではありません。";box.append(footer);
