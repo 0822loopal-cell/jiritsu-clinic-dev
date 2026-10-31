@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.79｜STEP 241 変更前後の経過要約</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.80｜STEP 242 来院時の実務要約</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -627,6 +627,47 @@ function nextVisitCareBeforeAfter(data){
  lines.push("※週間の実施・反応記録はセルフケア全体の情報で、個別メニューの効果を示すものではありません。判断は既存のセルフケア管理・施術記録に保存してください。");
  return lines.join("\n");
 }
+function nextVisitActionBrief(data){
+ const shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>typeof x?.raw==="string"&&typeof x.period==="string").sort((a,b)=>b.period.localeCompare(a.period));
+ const changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]).filter(x=>x?.item&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
+ const trials=(Array.isArray(data.selfcareTrials)?data.selfcareTrials:[]).filter(x=>x?.item&&x.decision==="採用");
+ const goal=typeof data.lifeGoal==="string"&&data.lifeGoal.trim()?data.lifeGoal.trim():"未登録（来院時に生活目標を確認）";
+ const lines=["【来院時の判断につなぐ要約】","生活目標："+goal];
+ if(!shares.length){lines.push("週間共有データがありません。直近の生活状況とセルフケア実施条件を聞き取ってください。");return lines.join("\n");}
+ const latest=shares[0];let days=null;
+ try{days=inspectWeeklyDailyPayload(latest.raw,latest.period).days;}catch{}
+ lines.push("対象："+latest.period);
+ const current=changes[0];
+ if(current)lines.push("直近の設定変更："+current.date+"／"+current.item+" "+scTrialName(current.item)+"／"+(current.before||"変更前不明")+" → "+(current.after||"変更後不明"));
+ else if(trials.length)lines.push("採用記録："+trials.map(x=>x.item+" "+scTrialName(x.item)).join("、")+"（設定変更履歴なし）");
+ else lines.push("採用メニュー：未登録。候補の確認と試行判断が必要です。");
+ if(!days){lines.push("日別データがないため、重点確認日は抽出できません。");return lines.join("\n");}
+ const nonDone=days.filter(d=>d.selfCare==="not-done"),concerning=days.filter(d=>d.selfCare==="done"&&d.response==="change");
+ const low=days.filter(d=>(typeof d.life?.sleep==="string"&&/眠れない|寝不足|悪い/.test(d.life.sleep))||(typeof d.life?.condition==="string"&&/良くない|悪い|不調/.test(d.life.condition)));
+ const done=days.filter(d=>d.selfCare==="done"),better=done.filter(d=>d.response==="better");
+ const valid=days.filter(d=>d.camera?.status==="valid");
+ lines.push("","【今回の確認優先事項】");
+ let rank=0;
+ if(concerning.length)lines.push((++rank)+"．実施後に気になる変化があった日："+concerning.map(d=>d.date).join("、")+"。メニュー・負荷・反応・回復時間を優先確認。");
+ const overlap=nonDone.filter(d=>low.some(x=>x.date===d.date));
+ if(overlap.length)lines.push((++rank)+"．未実施と生活・体感の不調が重なった日："+overlap.map(d=>d.date).join("、")+"。体調・休息・負荷と実施しなかった理由を確認。");
+ else if(nonDone.length)lines.push((++rank)+"．未実施日："+nonDone.map(d=>d.date).join("、")+"。生活に合わせた実施条件を確認。");
+ const increase=[];
+ const metrics=[["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"],["dailyImpact","生活への影響"]];
+ for(let i=1;i<days.length;i++){const d=days[i],p=days[i-1],names=metrics.filter(([k])=>Number.isInteger(d[k])&&Number.isInteger(p[k])&&d[k]>p[k]).map(([,v])=>v);if(names.length)increase.push(d.date+"（"+names.join("・")+"）");}
+ if(increase.length)lines.push((++rank)+"．前日より負担が増えた日："+increase.join("、")+"。活動・動作・タイミングを聞き取る。");
+ if(better.length)lines.push((++rank)+"．実施後「楽になった」"+better.length+"日。実施メニューを特定し、回数・支持物・時間帯を確認。");
+ if(!rank)lines.push("記録上の重点候補はありません。継続可能性と生活目標を確認。");
+ lines.push("","【4領域の照合状況】","症状・生活影響："+days.filter(d=>metrics.some(([k])=>Number.isInteger(d[k]))).length+"日／セルフケア実施："+done.length+"日／未実施："+nonDone.length+"日／生活・体感："+days.filter(d=>d.life&&Object.values(d.life).some(Boolean)).length+"日／カメラ有効："+valid.length+"日");
+ lines.push("","【再検討の判断材料】");
+ if(current){
+  const start=Date.parse(current.date+"T00:00:00Z");
+  const a=days.filter(d=>Date.parse(d.date+"T00:00:00Z")>start);
+  if(a.length)lines.push("・"+current.item+"の設定変更後に"+a.length+"日分の共有記録あり。個別メニューを実施したか本人に確認し、現在の負荷を再検討。");
+ }
+ lines.push("・確認した事実に基づき、施術者が「継続／回数・負荷・タイミング調整／保留・変更」を判断。","・決定した設定・理由・確認日を既存のセルフケア変更履歴または施術記録へ保存。","・次回来院時には、その決定日以降の週間データと照合。","※週間の実施記録は個別メニュー別ではありません。測定値や同日の重なりから原因・効果は自動判定しません。");
+ return lines.join("\n");
+}
 function renderNextVisitCards(box,data){
  box.replaceChildren();
  const summary=nextVisitSummary(data);
@@ -662,8 +703,11 @@ function renderNextVisitCards(box,data){
    const content=document.createElement("div");content.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";content.textContent=nextVisitCarePlanLink(data);link.append(content);
    const move=document.createElement("button");move.type="button";move.className="test-action";move.textContent="既存のセルフケア設定・変更記録へ移動";move.style.marginTop="12px";move.onclick=()=>{if(!unlocked||!selectedClientNo)return;const panel=document.getElementById("selfcare-trial-panel");if(!panel)return;panel.scrollIntoView({behavior:"smooth",block:"start"});const h=panel.querySelector("h3");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}};link.append(move);
    box.append(link);
+   const action=document.createElement("section");action.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f4f8f6;border:2px solid #6f9c8b;border-radius:10px";
+   const actionTitle=document.createElement("h4");actionTitle.textContent="②-C 来院時の実務要約｜確認からセルフケア再検討へ";actionTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";action.append(actionTitle);
+   const actionBody=document.createElement("div");actionBody.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";actionBody.textContent=nextVisitActionBrief(data);action.append(actionBody);box.append(action);
    const comparison=document.createElement("section");comparison.style.cssText="padding:14px 16px;margin:0 0 12px;background:#fff;border:1px solid #9ebcb3;border-radius:10px";
-   const compareTitle=document.createElement("h4");compareTitle.textContent="②-C セルフケア設定変更｜前後の経過比較";compareTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";comparison.append(compareTitle);
+   const compareTitle=document.createElement("h4");compareTitle.textContent="②-D セルフケア設定変更｜前後の経過比較";compareTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";comparison.append(compareTitle);
    const compareText=document.createElement("div");compareText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";compareText.textContent=nextVisitCareBeforeAfter(data);comparison.append(compareText);box.append(comparison);
   }
  }
