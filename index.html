@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.73｜STEP 235 週間経過からセルフケア再検討へ</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.74｜STEP 236 生活・体感・カメラ日別データ連携</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -241,6 +241,12 @@ function inspectWeeklyDailyPayload(raw,period){
   const day=value.days[i],expected=new Date(Date.parse(start+"T00:00:00Z")+i*86400000).toISOString().slice(0,10);
   if(!day||day.date!==expected||!["dizziness","unsteadiness","tinnitus","dailyImpact"].every(k=>score(day[k]))||!statuses.includes(day.selfCare)||!responses.includes(day.response)||(day.selfCare!=="done"&&day.response!==null))throw Error("日別データの"+(i+1)+"日目に不正な値があります。");
  }
+ const text=x=>x===null||(typeof x==="string"&&x.length<=100);
+ const metric=x=>x===null||(typeof x==="number"&&Number.isFinite(x)&&x>=0&&x<=500);
+ for(const day of value.days){
+  if(day.life!==undefined&&(!day.life||typeof day.life!=="object"||!["sleep","condition","activity"].every(k=>text(day.life[k]))))throw Error("生活・体感の日別データが不正です。");
+  if(day.camera!==undefined&&(!day.camera||typeof day.camera!=="object"||!["valid","reference","missing"].includes(day.camera.status)||!["hr","rmssd","sdnn"].every(k=>metric(day.camera[k]))||(day.camera.status!=="valid"&&["hr","rmssd","sdnn"].some(k=>day.camera[k]!==null))))throw Error("カメラ測定の日別データが不正です。");
+ }
  return {legacy:false,days:value.days};
 }
 function inspectDltWeeklyText(raw,no){
@@ -375,7 +381,7 @@ function weeklyDailyOverview(data){
   let parsed;try{parsed=inspectWeeklyDailyPayload(share.raw,share.period);}catch(e){lines.push(share.period+"：日別データ不正（"+e.message+"）");continue;}
   if(parsed.legacy){lines.push(share.period+"：旧形式のため日別データなし");continue;}
   lines.push("■ "+(share.week||"週未記載")+"｜"+share.period);
-  for(const d of parsed.days)lines.push(d.date+"｜"+[["めまい","dizziness"],["ふらつき","unsteadiness"],["耳鳴り","tinnitus"]].filter(pair=>visibleSymptoms(data).includes(pair[0])).map(pair=>pair[0]+" "+(d[pair[1]]??"―")).concat(["生活影響 "+(d.dailyImpact??"―")]).join("／")+"｜セルフケア "+({done:"実施","not-done":"未実施","no-instruction":"指示なし"}[d.selfCare]||"未記録")+(d.response?"（"+({better:"楽になった",same:"変化なし",change:"気になる変化"}[d.response]||"未記録")+"）":""));
+  for(const d of parsed.days)lines.push(d.date+"｜"+[["めまい","dizziness"],["ふらつき","unsteadiness"],["耳鳴り","tinnitus"]].filter(pair=>visibleSymptoms(data).includes(pair[0])).map(pair=>pair[0]+" "+(d[pair[1]]??"―")).concat(["生活影響 "+(d.dailyImpact??"―")]).join("／")+"｜セルフケア "+({done:"実施","not-done":"未実施","no-instruction":"指示なし"}[d.selfCare]||"未記録")+(d.response?"（"+({better:"楽になった",same:"変化なし",change:"気になる変化"}[d.response]||"未記録")+"）":"")+(d.life?"｜生活：睡眠 "+(d.life.sleep||"―")+"／体感 "+(d.life.condition||"―")+"／活動 "+(d.life.activity||"―"):"｜生活：旧形式・日別値なし")+(d.camera?"｜カメラ："+(d.camera.status==="valid"?"HR "+(d.camera.hr??"―")+"／RMSSD "+(d.camera.rmssd??"―")+"／SDNN "+(d.camera.sdnn??"―"):"有効測定なし"):"｜カメラ：旧形式・日別値なし"));
  }
  return lines.join("\n");
 }
@@ -444,6 +450,19 @@ function nextVisitCareReview(data){
  if(daily)rows.push("実施後の本人申告：楽になった"+better.length+"日／気になる変化"+change.length+"日");
  rows.push("生活・体感："+(life||"共有項目なし"),"カメラ測定："+(camera||"共有項目なし"));
  if(prior){const consecutive=Date.parse(latest.period.split("〜")[0])-Date.parse(prior.period.split("〜")[0])===7*86400000;rows.push("前週との比較："+(consecutive?"連続した2週。上の「直近の週間経過」で各項目を確認":"期間が連続しないため経過比較は保留"));}
+ if(daily&&daily.some(d=>d.life||d.camera)){
+  const valid=daily.filter(d=>d.camera?.status==="valid"&&d.camera.hr!==null&&d.camera.rmssd!==null&&d.camera.sdnn!==null);
+  const daysWithLife=daily.filter(d=>d.life&&Object.values(d.life).some(Boolean));
+  rows.push("","【日付別照合｜②③④⑤】","生活・体感の記録："+daysWithLife.length+"日／カメラ有効測定："+valid.length+"日");
+  const symptoms=chosen.map(([field,label])=>[field,label]);
+  for(const d of daily){
+   const scores=symptoms.map(([field,label])=>label+" "+(d[field]??"―")).join("／");
+   const care=({done:"実施", "not-done":"未実施","no-instruction":"指示なし"}[d.selfCare]||"未記録");
+   const life=d.life?["睡眠 "+(d.life.sleep||"―"),"体感 "+(d.life.condition||"―"),"活動 "+(d.life.activity||"―")].join("／"):"生活：旧共有形式";
+   const camera=d.camera?.status==="valid"?"HR "+(d.camera.hr??"―")+"／RMSSD "+(d.camera.rmssd??"―")+"／SDNN "+(d.camera.sdnn??"―"):"カメラ：有効値なし";
+   rows.push(d.date+"｜"+scores+"｜ケア "+care+"｜"+life+"｜"+camera);
+  }
+ }
  rows.push("","【来院時に確認すること】");
  if(!life||life.includes("記録 0日"))rows.push("・睡眠・活動・本人の体感を聞き取り、記録のない項目は推測しない");
  else rows.push("・体感が変わった日と、睡眠・活動・ふらつき等の変化が重なるか本人に確認");
