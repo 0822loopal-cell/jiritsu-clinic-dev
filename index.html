@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.99｜STEP 289 作成中記録の色分け</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.11.00｜STEP 291 選択補助の導入</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -297,6 +297,45 @@ async function ongoingShowSavedSessionAudit(container){
   }
  }catch(e){if(unlocked&&selectedClientNo===no)container.textContent="保存済み記録の確認に失敗："+e.message;}
 }
+
+function ongoingSelectionHelper(to,config){
+ const box=document.createElement("section");box.style.cssText="border:1px solid #b7cfc5;border-radius:9px;background:#fff;padding:12px;margin:12px 0";
+ const title=document.createElement("h4");title.textContent=config.title;title.style.margin="0 0 8px";box.appendChild(title);
+ const explanation=document.createElement("p");explanation.textContent=config.explanation;explanation.style.fontSize=".88rem";box.appendChild(explanation);
+ const choices=[];
+ if(config.kind==="service"){
+  const list=document.createElement("div");list.style.cssText="display:flex;flex-wrap:wrap;gap:8px";box.appendChild(list);
+  for(const [id,label] of [["zpt","かとう式鎮痛療法"],["body","整体・緊張緩和"],["care","セルフケア指導"],["video","個別セルフケア動画"]]){
+   const item=document.createElement("label");item.style.cssText="display:inline-flex;align-items:center;gap:6px;border:1px solid #dce7e4;border-radius:7px;padding:8px;cursor:pointer";
+   const input=document.createElement("input");input.type="checkbox";input.value=id;item.append(input,document.createTextNode(label));list.appendChild(item);choices.push({input,text:label});
+  }
+ }else{
+  for(const group of ["A","B","C","D","E","F"]){
+   const groupRows=scCandidateRules.filter(x=>x[0].startsWith(group));if(!groupRows.length)continue;
+   const details=document.createElement("details");details.style.cssText="margin:7px 0;border:1px solid #e0e9e6;border-radius:7px;padding:8px";
+   const header=document.createElement("summary");header.textContent=group+"｜"+({A:"視線・前庭",B:"姿勢・バランス",C:"歩行・日常動作",D:"身体の動き",E:"休息・調整",F:"耳鳴り"}[group])+"（"+groupRows.length+"候補）";header.style.cursor="pointer";details.appendChild(header);
+   for(const row of groupRows){
+    const item=document.createElement("label");item.style.cssText="display:flex;align-items:center;gap:7px;padding:5px 0;cursor:pointer";
+    const input=document.createElement("input");input.type="checkbox";input.value=row[0];item.append(input,document.createTextNode(row[0]+"｜"+row[1]));details.appendChild(item);choices.push({input,text:row[0]+"｜"+row[1]});
+   }box.appendChild(details);
+  }
+ }
+ const apply=document.createElement("button");apply.type="button";apply.className="test-action";apply.textContent="選択内容を記録欄に反映（保存はしない）";
+ const status=document.createElement("p");status.setAttribute("role","status");status.style.cssText="font-size:.88rem;white-space:pre-wrap;margin:8px 0";box.append(apply,status);
+ const target=document.getElementById(config.field);
+ apply.addEventListener("click",()=>{
+  const selected=choices.filter(x=>x.input.checked).map(x=>x.text);
+  if(!selected.length){status.textContent="反映する候補を選択してください。";return;}
+  const line=config.prefix+selected.join("／");
+  const original=target.value.replace(/\r\n/g,"\n");
+  const rows=original.split("\n").filter(x=>!x.startsWith(config.prefix));
+  const updated=[...rows.filter((x,i,a)=>!(x===""&&i===a.length-1)),line].join("\n").trim();
+  if(updated.length>target.maxLength){status.textContent="入力欄の上限文字数を超えるため反映しませんでした。既存の文章は変更していません。";return;}
+  target.value=updated;target.dispatchEvent(new Event("input",{bubbles:true}));
+  status.textContent=selected.length+"件の選択内容を反映しました。既存の自由記述は保持しています。⑤で保存するまでは未保存です。";
+ });
+ to.appendChild(box);
+}
 function renderOngoingWorkspace(){
  ongoingRestoreFields();
  const root=document.getElementById("ongoing-workspace-stage"),[title,description]=ongoingStages[ongoingStep];
@@ -314,13 +353,15 @@ function renderOngoingWorkspace(){
  const note=document.createElement("p");note.textContent="既存の入力欄をそのまま表示しています。工程切替では保存されません。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===2){
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
+ ongoingSelectionHelper(root,{kind:"service",field:"session-interventions",prefix:"【選択した提供サービス】",title:"提供サービスの選択補助（複数選択可）",explanation:"実際の手技・実施内容とは別です。該当する提供サービスを選び、下の「実施内容・選択理由」に反映します。反映後に実施内容や理由を追記してください。"});
  for(const id of ["session-interventions","session-response","session-reevaluation"])ongoingMoveField(id,root);
  const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="既存のセルフケア試行・採否・個別設定・履歴をそのまま利用します。セルフケア管理の保存は各機能の保存ボタンで行います。";note.style.fontSize=".85rem";root.appendChild(note);
- ongoingMovePanel("selfcare-trial-panel",root);
+ ongoingSelectionHelper(root,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"A〜Fの29候補から選び、下の施術記録へ反映します。ここでの選択は採用・変更の確定ではありません。正式な採否や個別設定は下の既存機能で管理してください。"});
  const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
  ongoingMoveField("session-selfcare",root);
+ ongoingMovePanel("selfcare-trial-panel",root);
  }else if(ongoingStep===4){
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
  const date=document.createElement("p");date.textContent="対象来院日："+(document.getElementById("session-date").value||"未設定");root.appendChild(date);
