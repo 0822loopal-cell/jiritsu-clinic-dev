@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.80｜STEP 242 来院時の実務要約</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.81｜STEP 243 生活目標と活動記録の照合</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -668,6 +668,52 @@ function nextVisitActionBrief(data){
  lines.push("・確認した事実に基づき、施術者が「継続／回数・負荷・タイミング調整／保留・変更」を判断。","・決定した設定・理由・確認日を既存のセルフケア変更履歴または施術記録へ保存。","・次回来院時には、その決定日以降の週間データと照合。","※週間の実施記録は個別メニュー別ではありません。測定値や同日の重なりから原因・効果は自動判定しません。");
  return lines.join("\n");
 }
+function nextVisitGoalActivityReview(data){
+ const goal=typeof data.lifeGoal==="string"?data.lifeGoal.trim():"";
+ const lines=["【生活目標と日常活動の照合】","生活目標："+(goal||"未登録")];
+ if(!goal){lines.push("生活目標が未登録のため、来院時に目標とする生活場面を確認してください。");return lines.join("\n");}
+ const shares=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>typeof x?.raw==="string"&&typeof x.period==="string").sort((a,b)=>b.period.localeCompare(a.period));
+ if(!shares.length){lines.push("週間記録なし。実際に目標とする活動を行った場面を聞き取ってください。");return lines.join("\n");}
+ const latest=shares[0];let days;
+ try{days=inspectWeeklyDailyPayload(latest.raw,latest.period).days;}catch{}
+ lines.push("照合期間："+latest.period);
+ if(!days){lines.push("日別活動記録がないため、生活目標に関連する日を特定できません。");return lines.join("\n");}
+ const cases=[
+  {goal:/買い物|スーパー|商店|店舗/,activities:/買い物|スーパー|商店|店舗/,question:"買い物できた時間、店内で負担が増えた動作（方向転換・視線移動など）、休息の要否を確認"},
+  {goal:/散歩|歩行|歩く|外出/,activities:/散歩|歩行|歩く|外出/,question:"歩行時間・距離、方向転換や立ち止まり時の負担、休息の要否を確認"},
+  {goal:/家事|掃除|洗濯|料理/,activities:/家事|掃除|洗濯|料理/,question:"どの家事をどの程度できたか、姿勢変化・立位・移動時の負担を確認"},
+  {goal:/仕事|通勤|職場/,activities:/仕事|通勤|職場/,question:"作業・移動を継続できた時間、負担の増える場面と休息の取り方を確認"}
+ ];
+ const matches=cases.filter(c=>c.goal.test(goal));
+ const relevant=days.filter(d=>typeof d.life?.activity==="string"&&matches.some(c=>c.activities.test(d.life.activity)));
+ const selected=visibleSymptoms(data);
+ const shown=[["dizziness","めまい"],["unsteadiness","ふらつき"],["tinnitus","耳鳴り"]].filter(x=>selected.includes(x[1])).concat([["dailyImpact","生活への影響"]]);
+ const facts=d=>shown.filter(([k])=>Number.isInteger(d[k])).map(([k,name])=>name+" "+d[k]).join("／");
+ lines.push("","【関連する活動記録】");
+ if(relevant.length){
+  for(const d of relevant.slice(0,7))lines.push("・"+d.date+"｜活動「"+d.life.activity+"」｜"+(facts(d)||"症状・生活影響の記録なし")+"｜体感「"+(d.life?.condition||"記録なし")+"」");
+  lines.push("該当："+relevant.length+"日。活動名が一致した記録であり、生活目標の達成を意味しません。");
+ }else lines.push("生活目標の語句に対応する活動名は、この週の記録では確認できません。活動の実施有無は来院時に聞き取ってください。");
+ lines.push("","【生活目標に向けた聞き取り】");
+ if(matches.length)for(const question of [...new Set(matches.map(x=>x.question))].slice(0,3))lines.push("・"+question);
+ else lines.push("・目標とする活動の実施日・継続時間・具体的に困った動作・休息の要否を確認");
+ const duration=goal.match(/(\d+)\s*分/);
+ if(duration)lines.push("・目標「"+duration[1]+"分」に対し、実際に何分できたか、途中休息を含めて確認（活動時間は日別記録からは判定不可）");
+ const trials=(Array.isArray(data.selfcareTrials)?data.selfcareTrials:[]).filter(x=>x?.item&&x.decision==="採用");
+ const state=(Array.isArray(data.selfcareStateHistory)?data.selfcareStateHistory:[]),changes=(Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[]);
+ const byItem=new Map();for(const t of trials){const prev=byItem.get(t.item);if(!prev||String(t.savedAt||"")>String(prev.savedAt||""))byItem.set(t.item,t);}
+ const adopted=[...byItem.values()].filter(t=>{const latestEvent=state.filter(x=>x.item===t.item&&String(x.savedAt||"")>String(t.savedAt||"")).sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")))[0];return !latestEvent||latestEvent.to==="採用中";}).sort((a,b)=>a.item.localeCompare(b.item));
+ lines.push("","【採用中のセルフケアとの照合】");
+ if(!adopted.length)lines.push("採用中メニューの記録なし。生活目標に必要な動作を確認し、候補の試行を検討してください。");
+ for(const t of adopted){
+  const change=changes.filter(x=>x.item===t.item&&String(x.savedAt||"")>String(t.savedAt||"")).sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")))[0];
+  lines.push("・"+t.item+"｜"+scTrialName(t.item)+"｜設定："+(change?.after||t.plan||"未記録"));
+  if(t.item==="C02"&&/買い物|スーパー|歩行|散歩|外出/.test(goal))lines.push("  照合候補：方向転換を伴う日常動作の負担。練習時と実際の生活場面での反応を比較して聞き取る。");
+  else lines.push("  確認候補：このメニューの実施条件が、生活目標に必要な動作・活動とどう関係するかを本人と確認する。");
+ }
+ lines.push("","【再検討の着眼点】","・生活目標の進捗と、実際に困る動作・場面を優先して整理する。","・その結果と個別セルフケアの実施条件・負荷・反応を照合し、施術者が継続・調整・保留を決定する。","・日別の「活動」は活動名の記録です。実施時間や目標達成度、個別メニューの効果を自動推定しません。");
+ return lines.join("\n");
+}
 function renderNextVisitCards(box,data){
  box.replaceChildren();
  const summary=nextVisitSummary(data);
@@ -703,6 +749,9 @@ function renderNextVisitCards(box,data){
    const content=document.createElement("div");content.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";content.textContent=nextVisitCarePlanLink(data);link.append(content);
    const move=document.createElement("button");move.type="button";move.className="test-action";move.textContent="既存のセルフケア設定・変更記録へ移動";move.style.marginTop="12px";move.onclick=()=>{if(!unlocked||!selectedClientNo)return;const panel=document.getElementById("selfcare-trial-panel");if(!panel)return;panel.scrollIntoView({behavior:"smooth",block:"start"});const h=panel.querySelector("h3");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}};link.append(move);
    box.append(link);
+   const goalSection=document.createElement("section");goalSection.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f7faf7;border:2px solid #7fa897;border-radius:10px";
+   const goalHeading=document.createElement("h4");goalHeading.textContent="②-E 生活目標を起点としたセルフケア再検討";goalHeading.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";goalSection.append(goalHeading);
+   const goalText=document.createElement("div");goalText.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";goalText.textContent=nextVisitGoalActivityReview(data);goalSection.append(goalText);box.append(goalSection);
    const action=document.createElement("section");action.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f4f8f6;border:2px solid #6f9c8b;border-radius:10px";
    const actionTitle=document.createElement("h4");actionTitle.textContent="②-D 来院時の実務要約｜確認からセルフケア再検討へ";actionTitle.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";action.append(actionTitle);
    const actionBody=document.createElement("div");actionBody.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";actionBody.textContent=nextVisitActionBrief(data);action.append(actionBody);box.append(action);
