@@ -412,11 +412,11 @@ function nextVisitWeeklyDigest(data){
  const life=section(latest,"② 生活と体感の推移"),camera=section(latest,"⑤ カメラ測定値");
  const priorLife=section(prior,"② 生活と体感の推移"),priorCamera=section(prior,"⑤ カメラ測定値");
  const available=x=>x&&x.trim()?x.trim():"共有文に記録なし";
- lines.push("","【② 生活と体感の推移】",available(life));
+ lines.push("","② 生活と体感の推移",available(life));
  if(consecutive&&priorLife)lines.push("前週："+priorLife.trim());
- lines.push("","【⑤ カメラ測定値】",available(camera));
+ lines.push("","⑤ カメラ測定値",available(camera));
  if(consecutive&&priorCamera)lines.push("前週："+priorCamera.trim());
- lines.push("","【来院時の照合事項】","②生活と体感・③症状と生活影響・④セルフケア・⑤カメラ測定値を合わせて確認してください。変化の原因や支援内容は数値だけで自動判断しません。");
+ lines.push("","来院時の照合事項","②生活と体感・③症状と生活影響・④セルフケア・⑤カメラ測定値を合わせて確認してください。変化の原因や支援内容は数値だけで自動判断しません。");
  const careMatch=care.match(/実施した (\d+)日 \/ 実施しなかった (\d+)日/);
  lines.push("セルフケア："+(careMatch?"実施 "+careMatch[1]+"日／未実施 "+careMatch[2]+"日":"記録なし"));
  if(prior&&!consecutive)lines.push("前週との連続比較なし");
