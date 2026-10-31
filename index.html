@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.11.00｜STEP 291 選択補助の導入</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.11.01｜STEP 291 選択内容の再編集復元</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -320,6 +320,8 @@ function ongoingSelectionHelper(to,config){
    }box.appendChild(details);
   }
  }
+ const savedLine=document.getElementById(config.field).value.replace(/\r\n/g,"\n").split("\n").find(x=>x.startsWith(config.prefix));
+ if(savedLine){const existing=savedLine.slice(config.prefix.length).split("／");for(const choice of choices)choice.input.checked=existing.includes(choice.text);}
  const apply=document.createElement("button");apply.type="button";apply.className="test-action";apply.textContent="選択内容を記録欄に反映（保存はしない）";
  const status=document.createElement("p");status.setAttribute("role","status");status.style.cssText="font-size:.88rem;white-space:pre-wrap;margin:8px 0";box.append(apply,status);
  const target=document.getElementById(config.field);
