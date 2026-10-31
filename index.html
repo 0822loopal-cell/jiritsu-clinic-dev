@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.83｜STEP 245 来院チェック順序修正・運用点検</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.84｜STEP 246 初回ヒアリング・4領域評価の運用点検</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -543,7 +543,7 @@ function nextVisitSummary(data){
 const lines=["【生活目標】",typeof data.lifeGoal==="string"&&data.lifeGoal.trim()?data.lifeGoal.trim():"未登録"];
 const checks=[["① 安静時",["restVertigo","restBalance"]],["② 視線安定",["gazeBlur","gazeRecovery"]],["③ 姿勢・歩行",["postureStanding","postureWalking","postureTurnLeft","postureTurnRight"]],["④ 生活機能",["lifeMinutes","lifeGoalScore"]]];
 const labels={restVertigo:"めまい",restBalance:"ふらつき",gazeBlur:"視界のぶれ",gazeRecovery:"回復時間",postureStanding:"立位",postureWalking:"直線歩行",postureTurnLeft:"左方向転換",postureTurnRight:"右方向転換",lifeMinutes:"活動時間（分）",lifeGoalScore:"目標達成度"};
-const assessments=Array.isArray(data.assessments)?data.assessments:[];lines.push("","【4領域評価｜各項目の直近記録】");for(const [domain,fields] of checks){const parts=[];for(const field of fields){for(let i=assessments.length-1;i>=0;i--){const e=assessments[i],v=e?.values?.[field];if(v!==""&&v!=null){parts.push(labels[field]+"："+v+"（"+(e.date||"日付なし")+"）");break;}}}lines.push(domain+"："+(parts.length?parts.join("／"):"未評価"));}
+const assessments=(Array.isArray(data.assessments)?data.assessments:[]).slice().sort((a,b)=>String(a?.date||"").localeCompare(String(b?.date||""))||String(a?.savedAt||"").localeCompare(String(b?.savedAt||"")));lines.push("","【4領域評価｜各項目の直近記録】");for(const [domain,fields] of checks){const parts=[];for(const field of fields){for(let i=assessments.length-1;i>=0;i--){const e=assessments[i],v=e?.values?.[field];if(v!==""&&v!=null){parts.push(labels[field]+"："+v+"（"+(e.date||"日付なし")+"）");break;}}}lines.push(domain+"："+(parts.length?parts.join("／"):"未評価"));}
 const plans=Array.isArray(data.supportPlans)?data.supportPlans:[];const recentPlan=plans.map((p,i)=>({p,i})).sort((a,b)=>String(b.p.date||"").localeCompare(String(a.p.date||""))||b.i-a.i)[0]?.p;lines.push("","【直近の支援方針・料金・承諾】");if(recentPlan){const kind=recentPlan.kind==="initial"?"初回":recentPlan.kind==="monthly"?"定期再評価":"継続";const mode=recentPlan.mode==="online"?"オンライン":"対面";const names={zpt:"かとう式鎮痛療法",body:"整体・緊張緩和",care:"セルフケア指導",video:"個別セルフケア動画（1本）"};const consent={pending:"説明済み・検討中",accepted:"本人が承諾",declined:"本人が辞退"};lines.push("対象日："+(recentPlan.date||"日付なし")+"／"+kind+"／"+mode,"料金：税込"+Number(recentPlan.total).toLocaleString("ja-JP")+"円","メニュー区分："+(recentPlan.kind==="ongoing"?"当日採用":"今後の提案"),"サービス："+((Array.isArray(recentPlan.services)?recentPlan.services:[]).map(x=>names[x]||x).join("・")||"追加サービスなし"),"方針・説明："+(recentPlan.details||"未入力"),"承諾："+(consent[recentPlan.consent]||"未確認"));}else lines.push("支援方針の保存記録なし");
 const sessions=Array.isArray(data.sessions)?data.sessions:[];const ranked=sessions.map((v,i)=>({v,i})).sort((a,b)=>String(b.v.date||"").localeCompare(String(a.v.date||""))||b.i-a.i);const latest=ranked[0]?.v;lines.push("","【直近の施術記録】");if(latest){const v=latest.values||{};lines.push("来院日："+(latest.date||"未設定")+"／"+(latest.status==="complete"?"完了":"作成中"),"前回からの変化・セルフケアの状況："+(v.sinceLast||"未入力"),"前回の再評価："+(v.reevaluation||"未入力"),"次回確認事項："+(v.next||"未入力"));}else lines.push("施術記録なし");
 const trials=Array.isArray(data.selfcareTrials)?data.selfcareTrials:[],trialById=new Map();for(const t of trials){if(t?.item)trialById.set(t.item,t);}
@@ -750,6 +750,30 @@ function nextVisitDisclosure(label,body,open=false){
  const summary=document.createElement("summary");summary.textContent=label;summary.style.cssText="cursor:pointer;padding:12px 14px;font-weight:700;color:#244a49;background:#f7faf9";details.append(summary);
  body.style.cssText+=";margin:12px";details.append(body);return details;
 }
+function nextVisitIntakeAssessmentAudit(data){
+ const intake=data.intake&&typeof data.intake==="object"?data.intake:null;
+ const lines=["【初回ヒアリングと4領域評価の接続確認】"];
+ lines.push("医療機関で伝えられた診断名："+(intake?.diagnosis||"記録なし"));
+ if(intake?.symptomsConfirmed===true&&Array.isArray(intake.detailGroups)){
+  lines.push("症状の有無：確認済み／該当："+(visibleSymptoms(data).join("・")||"なし"));
+ }else lines.push("症状の有無：確認済みの記録なし（症状別表示は未確定）");
+ lines.push("発症・経過："+(intake?.onset||"記録なし"));
+ const medicalVisits=[1,2,3].map(n=>({date:intake?.["visit"+n+"Date"],place:intake?.["visit"+n+"Place"]})).filter(x=>x.date||x.place);
+ lines.push("受診歴："+(medicalVisits.length?medicalVisits.length+"件の記録あり":"記録なし"));
+ lines.push("生活上の困りごと："+(intake?.daily||"記録なし"));
+ lines.push("生活目標："+(typeof data.lifeGoal==="string"&&data.lifeGoal.trim()?data.lifeGoal.trim():"記録なし"));
+ const assessments=(Array.isArray(data.assessments)?data.assessments:[]).slice().sort((a,b)=>String(b?.date||"").localeCompare(String(a?.date||""))||String(b?.savedAt||"").localeCompare(String(a?.savedAt||"")));
+ const domains=[["① 安静時",["restVertigo","restBalance"]],["② 視線安定",["gazeBlur","gazeRecovery","gazeConditions"]],["③ 姿勢・歩行",["postureStanding","postureWalking","postureTurnLeft","postureTurnRight"]],["④ 生活機能",["lifeMinutes","lifeGoalScore"]]];
+ lines.push("","【4領域評価の記録状況】","保存済み評価："+assessments.length+"件");
+ for(const [name,fields] of domains){
+  const latest=assessments.find(a=>fields.some(k=>a?.values?.[k]!==undefined&&a.values[k]!==null&&String(a.values[k]).trim()!==""));
+  if(!latest){lines.push(name+"：記録なし");continue;}
+  const count=fields.filter(k=>latest?.values?.[k]!==undefined&&latest.values[k]!==null&&String(latest.values[k]).trim()!=="").length;
+  lines.push(name+"："+(latest.date||"日付未設定")+"の評価に"+count+"項目の記録（詳細は⑤ 4領域評価を参照）");
+ }
+ lines.push("","【運用確認】","・初回ヒアリングの症状確認と、4領域評価の実施項目が一致するか確認する。","・症状別の詳細、受診歴、生活目標に照らして、再評価する動作・生活場面を選ぶ。","・評価日が過去の記録でも、その日付を基準に時系列表示する。未実施の項目は補完しない。","※この一覧は保存済みデータの参照専用です。初回ヒアリングや評価履歴を変更しません。");
+ return lines.join("\n");
+}
 function renderNextVisitCards(box,data){
  box.replaceChildren();
  const quick=document.createElement("section");quick.style.cssText="padding:14px 16px;margin:0 0 16px;background:#eef7f2;border:2px solid #7fa897;border-radius:10px";
@@ -779,6 +803,11 @@ function renderNextVisitCards(box,data){
    section.append(hint);
   }
   box.append(nextVisitDisclosure(labels[key],section));
+  if(key==="【4領域評価｜各項目の直近記録】"){
+   const audit=document.createElement("section");audit.style.cssText="padding:12px 14px;background:#fff;border-radius:8px";
+   const text=document.createElement("div");text.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;font-size:.94rem";text.textContent=nextVisitIntakeAssessmentAudit(data);audit.append(text);
+   box.append(nextVisitDisclosure("⑤-A 初回ヒアリングと4領域評価｜接続確認",audit));
+  }
   if(key==="【直近の週間経過｜来院時チェック】"){
    const review=document.createElement("section");review.style.cssText="padding:14px 16px;margin:0 0 12px;background:#f8fbfa;border:2px solid #9ebcb3;border-radius:10px";
    const title=document.createElement("h4");title.textContent="②-A 週間データを活かす｜セルフケア再検討";title.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";review.append(title);
