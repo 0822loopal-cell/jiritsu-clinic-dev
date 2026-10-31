@@ -436,11 +436,9 @@ function nextVisitCareReview(data){
  const better=performed.filter(d=>d.response==="better"),change=performed.filter(d=>d.response==="change");
  const symptomNames=[["dizziness","めまい","vertigo"],["unsteadiness","ふらつき","balance"],["tinnitus","耳鳴り","tinnitus"],["dailyImpact","生活への影響",null]];
  const selected=visibleSymptoms(data),chosen=symptomNames.filter(x=>!x[2]||selected.includes(x[1]));
- const score=d=>chosen.filter(x=>Number.isInteger(d[x[0]])).map(x=>d[x[0]]);
- const dailyScores=daily?daily.map(d=>{const a=score(d);return {date:d.date,value:a.length?a.reduce((n,v)=>n+v,0)/a.length:null,care:d.selfCare,response:d.response};}).filter(x=>x.value!==null):[];
- const sequence=(arr)=>arr.length>1?arr[0].value.toFixed(1)+" → "+arr[arr.length-1].value.toFixed(1):arr.length?arr[0].value.toFixed(1):"記録なし";
+ const perSymptom=daily?chosen.map(([field,label])=>{const values=daily.map(d=>d[field]).filter(v=>Number.isInteger(v)&&v>=0&&v<=4);return label+"："+(values.length?values[0]+" → "+values[values.length-1]+"（"+values.length+"日記録）":"記録なし");}):[];
  rows.push("【確認できた経過】","対象："+(latest.week||"週未記載")+"｜"+latest.period);
- if(daily){rows.push("DLT・生活影響（記録のある項目の平均、0〜4）："+sequence(dailyScores)+" ※参考表示。各項目の違いは週間経過で確認");}
+ if(daily){rows.push("症状・生活への影響（各項目0〜4）："+perSymptom.join("／"));}
  else rows.push("DLT・生活影響：日別比較なし。症状別の推移は週間経過で確認");
  rows.push("セルフケア："+(daily?"実施"+performed.length+"日／未実施"+undone.length+"日／指示なし"+known.filter(d=>d.selfCare==="no-instruction").length+"日":"週間共有文："+(care||"未記録")));
  if(daily)rows.push("実施後の本人申告：楽になった"+better.length+"日／気になる変化"+change.length+"日");
@@ -456,8 +454,7 @@ function nextVisitCareReview(data){
   if(undone.length)rows.push("・未実施"+undone.length+"日の理由（時間・負担・体調）を確認");
   if(change.length)rows.push("・実施後に気になる変化があった"+change.length+"日の動作・負荷・回復時間を優先して確認");
   if(better.length)rows.push("・楽になった"+better.length+"日の実施メニュー・時間帯・負荷を確認（効果の断定はしない）");
-  const sameDate=dailyScores.filter(d=>d.care==="done"),noDate=dailyScores.filter(d=>d.care==="not-done");
-  if(sameDate.length&&noDate.length)rows.push("・実施日と未実施日の症状・生活影響を比べ、生活条件の違いも聞き取る");
+  if(performed.length&&undone.length)rows.push("・実施日と未実施日の症状・生活影響を比べ、生活条件の違いも聞き取る");
   if(!rows.some(x=>x.startsWith("・未実施")||x.startsWith("・実施後")||x.startsWith("・楽になった")))rows.push("・実施したセルフケアの種類・設定・日常での行いやすさを確認");
  }
  rows.push("","【セルフケア再検討の視点（施術者が決定）】",
