@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.71｜STEP 232 支援方針の同日重複登録防止</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.72｜STEP 234 来院時の4領域週間データ照合</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -255,11 +255,11 @@ const dates=period.split("〜");if(dates.length!==2||dates.some(x=>!/^\d{4}-\d{2
 const start=Date.parse(dates[0]+"T00:00:00Z"),end=Date.parse(dates[1]+"T00:00:00Z");
 if(!Number.isFinite(start)||!Number.isFinite(end)||end-start!==6*86400000||new Date(start).toISOString().slice(0,10)!==dates[0]||new Date(end).toISOString().slice(0,10)!==dates[1])return "集計期間が正しい7日間ではありません。";
 const extract=(title)=>{const i=text.indexOf(title);if(i<0)return null;return text.slice(i+title.length).trimStart().split(/\n\s*\n/)[0].trim();};
-const record=extract("① 記録状況"),dlt=extract("③ DLT｜症状と生活への影響"),care=extract("④ セルフケア・セルフリハ");
+const record=extract("① 記録状況"),life=extract("② 生活と体感の推移"),dlt=extract("③ DLT｜症状と生活への影響"),care=extract("④ セルフケア・セルフリハ"),camera=extract("⑤ カメラ測定値");
 if(!record||!dlt||!care)return "必要な共有項目が不足しています。共有文を省略せずに貼り付けてください。";
 if(["めまい：記録なし","ふらつき：記録なし","耳鳴り：記録なし","日常生活への影響：記録なし"].every(v=>dlt.includes(v))&&care.includes("未記録 7日"))return "【内容確認が必要】\nNO・集計期間・共有形式は一致しましたが、DLTの4項目がすべて記録なし、セルフケアも7日間未記録です。\n症状・セルフケアの値がある週間サマリーをクライアント用アプリで表示し、その画面の「共有文をコピーする（PC用）」を押して再度貼り付けてください。\n※今回は取り込み確認OKとせず、保存もしません。";
 let dailyCheck;try{dailyCheck=inspectWeeklyDailyPayload(text,period);}catch(e){return "【日別データ照合エラー】"+e.message;}
-return "【取り込み前照合：OK】\nクライアントNO："+client+"（一致）\n集計期間："+period+"（7日間）\n集計週："+(week||"未記載")+"\n\n【記録状況】\n"+record+"\n\n【症状・生活への影響】\n"+dlt+"\n\n【セルフケア】\n"+care+"\n\n【日別データ】\n"+(dailyCheck.legacy?"旧形式：日別データなし":dailyCheck.days.length+"日分の形式・期間・数値を確認") + "\n\n※この画面では保存していません。";
+return "【取り込み前照合：OK】\nクライアントNO："+client+"（一致）\n集計期間："+period+"（7日間）\n集計週："+(week||"未記載")+"\n\n【記録状況】\n"+record+"\n\n【生活と体感の推移】\n"+(life||"旧共有形式：項目なし")+"\n\n【症状・生活への影響】\n"+dlt+"\n\n【セルフケア】\n"+care+"\n\n【カメラ測定値】\n"+(camera||"旧共有形式：項目なし")+"\n\n【日別データ】\n"+(dailyCheck.legacy?"旧形式：日別データなし":dailyCheck.days.length+"日分の形式・期間・数値を確認") + "\n\n※この画面では保存していません。";
 }
 document.getElementById("dlt-week-preview-button").onclick=()=>{if(!unlocked||!selectedClientNo)return;document.getElementById("dlt-week-preview-result").textContent=inspectDltWeeklyText(document.getElementById("dlt-week-preview-input").value,selectedClientNo);};
 
@@ -409,6 +409,14 @@ function nextVisitWeeklyDigest(data){
   if(consecutive&&before)line+="／前週末 "+before[3]+" → 今週末 "+current[3]+"（差 "+(Number(current[3])-Number(before[3]))+"）";
   lines.push(line);
  }
+ const life=section(latest,"② 生活と体感の推移"),camera=section(latest,"⑤ カメラ測定値");
+ const priorLife=section(prior,"② 生活と体感の推移"),priorCamera=section(prior,"⑤ カメラ測定値");
+ const available=x=>x&&x.trim()?x.trim():"共有文に記録なし";
+ lines.push("","【② 生活と体感の推移】",available(life));
+ if(consecutive&&priorLife)lines.push("前週："+priorLife.trim());
+ lines.push("","【⑤ カメラ測定値】",available(camera));
+ if(consecutive&&priorCamera)lines.push("前週："+priorCamera.trim());
+ lines.push("","【来院時の照合事項】","②生活と体感・③症状と生活影響・④セルフケア・⑤カメラ測定値を合わせて確認してください。変化の原因や支援内容は数値だけで自動判断しません。");
  const careMatch=care.match(/実施した (\d+)日 \/ 実施しなかった (\d+)日/);
  lines.push("セルフケア："+(careMatch?"実施 "+careMatch[1]+"日／未実施 "+careMatch[2]+"日":"記録なし"));
  if(prior&&!consecutive)lines.push("前週との連続比較なし");
