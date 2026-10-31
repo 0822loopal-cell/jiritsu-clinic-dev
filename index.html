@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.97｜STEP 286 業務画面の案内更新</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.98｜STEP 288 ⑤で保存結果・履歴確認</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -271,6 +271,32 @@ async function ongoingShowPreparation(root){
  contents.textContent=nextVisitQuickView(data)+"\n\n"+nextVisitCarePlanLink(data)+"\n\n"+document.getElementById("session-previous").textContent+"\n\n"+document.getElementById("session-handoff").textContent;
  }catch(e){if(ongoingStep===0&&selectedClientNo===no)contents.textContent="読み込み失敗："+e.message;}
 }
+async function ongoingShowSavedSessionAudit(container){
+ const no=selectedClientNo,key=activeKey;
+ if(!unlocked||!key||!no)return;
+ container.replaceChildren();
+ const loading=document.createElement("p");loading.textContent="保存済み記録を確認中…";container.appendChild(loading);
+ try{
+  const data=await readClientData(no,key);
+  if(!unlocked||activeKey!==key||selectedClientNo!==no||!container.isConnected)return;
+  const sessions=Array.isArray(data.sessions)?data.sessions:[];
+  container.replaceChildren();
+  const overview=document.createElement("p");
+  overview.style.fontWeight="bold";
+  overview.textContent="保存済み記録："+sessions.length+"件｜作成中："+sessions.filter(x=>x.status!=="complete").length+"件｜完了："+sessions.filter(x=>x.status==="complete").length+"件";
+  container.appendChild(overview);
+  if(!sessions.length){const empty=document.createElement("p");empty.textContent="保存済み記録はありません。";container.appendChild(empty);return;}
+  for(let i=sessions.length-1;i>=0;i--){
+   const item=sessions[i],details=document.createElement("details"),heading=document.createElement("summary");
+   details.style.cssText="padding:9px;border-top:1px solid #dce7e4";
+   heading.style.cursor="pointer";
+   heading.textContent="記録 "+(i+1)+"｜"+(item.date||"日付なし")+"｜"+(item.status==="complete"?"完了":"作成中")+"｜更新："+(item.updatedAt||item.savedAt?new Date(item.updatedAt||item.savedAt).toLocaleString("ja-JP"):"不明");
+   details.appendChild(heading);
+   for(const field of sessionFields){const value=item.values?.[field];if(!value)continue;const row=document.createElement("p");row.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0";row.textContent=sessionLabels[field]+"："+value;details.appendChild(row);}
+   container.appendChild(details);
+  }
+ }catch(e){if(unlocked&&selectedClientNo===no)container.textContent="保存済み記録の確認に失敗："+e.message;}
+}
 function renderOngoingWorkspace(){
  ongoingRestoreFields();
  const root=document.getElementById("ongoing-workspace-stage"),[title,description]=ongoingStages[ongoingStep];
@@ -301,6 +327,7 @@ function renderOngoingWorkspace(){
  ongoingMoveField("session-next",root);
  const note=document.createElement("p");note.textContent="ここでの保存操作は既存の施術・サポート記録を保存・更新します。セルフケアの採否や個別設定は④の各保存ボタンで管理します。";note.style.fontSize=".85rem";root.appendChild(note);
  for(const id of ["session-save","session-complete","session-new","session-status"])ongoingMovePanel(id,root);
+ const audit=document.createElement("section");audit.style.cssText="margin-top:16px;padding:12px;border:1px solid #cbdad6;border-radius:9px;background:#fff";const heading=document.createElement("h4");heading.textContent="保存済み記録の確認（読み取り専用）";const reload=document.createElement("button");reload.type="button";reload.className="test-action";reload.textContent="保存済み記録を再読み込み";const content=document.createElement("div");audit.append(heading,reload,content);root.appendChild(audit);reload.addEventListener("click",()=>ongoingShowSavedSessionAudit(content));ongoingShowSavedSessionAudit(content);
  }
  document.querySelectorAll("#ongoing-workspace-tabs [data-ongoing-step]").forEach(button=>{const active=Number(button.dataset.ongoingStep)===ongoingStep;button.setAttribute("aria-pressed",String(active));button.style.background=active?"#d9eee5":"";button.style.borderColor=active?"#487d6b":"";});
  document.getElementById("ongoing-workspace-prev").disabled=ongoingStep===0;document.getElementById("ongoing-workspace-next").disabled=ongoingStep===ongoingStages.length-1;
