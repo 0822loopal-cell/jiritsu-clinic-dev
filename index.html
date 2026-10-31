@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.75｜STEP 237 来院時の重点確認ポイント抽出</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.76｜STEP 238 重点確認ポイントの複数領域照合</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -431,45 +431,57 @@ function nextVisitWeeklyDigest(data){
 }
 function nextVisitFocusPoints(days,chosen){
  if(!Array.isArray(days)||!days.length)return ["日別データがありません。週間集計と来院時の聞き取りで確認してください。"];
- const items=[];
- const add=(priority,date,headline,details,question)=>items.push({priority,date,headline,details,question});
- const names=chosen.map(([field,label])=>({field,label}));
- const symptomValues=d=>names.filter(x=>Number.isInteger(d[x.field])).map(x=>({name:x.label,value:d[x.field]}));
- const scoreSignature=d=>symptomValues(d).map(x=>x.name+" "+x.value).join("／")||"症状・生活影響の記録なし";
- for(let i=0;i<days.length;i++){
-  const day=days[i],prev=i?days[i-1]:null,vals=symptomValues(day),prior=prev?symptomValues(prev):[];
-  const changes=vals.filter(v=>prior.some(p=>p.name===v.name&&v.value>p.value)).map(v=>{const p=prior.find(x=>x.name===v.name);return v.name+" "+p.value+"→"+v.value;});
-  if(changes.length)add(1,day.date,"負担の増加",changes.join("／"),"増えた項目の生活場面・動作・負荷を確認");
-  if(day.selfCare==="done"&&day.response==="change")add(1,day.date,"セルフケア実施後の気になる変化","本人が「気になる変化」と記録","実施メニュー・回数・直後の状態・回復時間を優先確認");
-  const lowCondition=typeof day.life?.condition==="string"&&/良くない|悪い|不調/.test(day.life.condition);
-  const lowSleep=typeof day.life?.sleep==="string"&&/眠れない|寝不足|悪い/.test(day.life.sleep);
-  const missed=day.selfCare==="not-done";
-  if((lowCondition&&lowSleep)||(missed&&(lowCondition||lowSleep))){
-   const facts=[lowSleep?"睡眠「"+day.life.sleep+"」":null,lowCondition?"体感「"+day.life.condition+"」":null,missed?"セルフケア未実施":null].filter(Boolean);
-   add(2,day.date,"生活・体感・実施状況の重なり",facts.join("／")+"／"+scoreSignature(day),"未実施や不調の背景（休息・活動・負荷）を聞き取る");
-  }else if(missed)add(2,day.date,"セルフケア未実施","未実施／"+scoreSignature(day),"実施できなかった理由と続けやすい条件を確認");
- }
- const comparisons=[];
- for(let i=0;i<days.length;i++){
-  const day=days[i],v=symptomValues(day);
-  if(day.selfCare!=="done"||day.response!=="better"||!v.length)continue;
-  const same=[day];for(let j=i+1;j<days.length;j++){
-   const other=days[j],ov=symptomValues(other);
-   if(other.selfCare!=="done"||other.response!=="better"||ov.length!==v.length||ov.some(x=>!v.some(t=>t.name===x.name&&t.value===x.value)))break;
-   same.push(other);
+ const items=[],names=chosen.map(([field,label])=>({field,label}));
+ const values=d=>names.filter(x=>Number.isInteger(d[x.field])).map(x=>({name:x.label,value:d[x.field]}));
+ const signature=d=>values(d).map(x=>x.name+" "+x.value).join("／")||"症状・生活影響の記録なし";
+ const add=(priority,date,title,details,question)=>items.push({priority,date,title,details,question});
+ const hasLowSleep=d=>typeof d.life?.sleep==="string"&&/眠れない|寝不足|悪い/.test(d.life.sleep);
+ const hasLowCondition=d=>typeof d.life?.condition==="string"&&/良くない|悪い|不調/.test(d.life.condition);
+ const validCamera=days.filter(d=>d.camera?.status==="valid"&&["hr","rmssd","sdnn"].every(k=>typeof d.camera[k]==="number"&&Number.isFinite(d.camera[k])));
+ const cameraContext=d=>{
+  if(validCamera.length<3||!validCamera.includes(d))return "";
+  const signs=[];
+  for(const [field,label,extreme] of [["hr","HR","max"],["rmssd","RMSSD","min"],["sdnn","SDNN","min"]]){
+   const group=validCamera.map(x=>x.camera[field]),min=Math.min(...group),max=Math.max(...group);
+   if(min===max)continue;
+   const v=d.camera[field];
+   if((extreme==="max"&&v===max)||(extreme==="min"&&v===min))signs.push(label+" "+v+"（この"+validCamera.length+"日の"+(extreme==="max"?"最高":"最低")+"値）");
   }
-  if(same.length>=2)comparisons.push({start:i,end:i+same.length-1,days:same}); 
+  return signs.join("／");
+ };
+ for(let i=0;i<days.length;i++){
+  const d=days[i],prev=i?days[i-1]:null,current=values(d),previous=prev?values(prev):[];
+  const increases=current.filter(v=>previous.some(p=>p.name===v.name&&v.value>p.value)).map(v=>{const p=previous.find(x=>x.name===v.name);return v.name+" "+p.value+"→"+v.value;});
+  const missed=d.selfCare==="not-done",lowSleep=hasLowSleep(d),lowCondition=hasLowCondition(d),camera=cameraContext(d);
+  if(d.selfCare==="done"&&d.response==="change")add(0,d.date,"実施後に気になる変化","本人の申告「気になる変化」／"+signature(d),"実施したメニュー・負荷・動作直後の反応・回復までの時間を優先確認");
+  if((missed&&(lowSleep||lowCondition))||(lowSleep&&lowCondition)){
+   const facts=[lowSleep?"睡眠「"+d.life.sleep+"」":null,lowCondition?"体感「"+d.life.condition+"」":null,missed?"セルフケア未実施":null].filter(Boolean);
+   if(camera)facts.push("カメラ："+camera);
+   add(1,d.date,"複数領域の変化が重なった日",facts.join("／")+"／"+signature(d),"その日の休息・活動負荷・セルフケアを実施できなかった理由を確認。数値との因果関係は決めつけない");
+  }else if(missed)add(2,d.date,"セルフケア未実施","未実施／"+signature(d)+(camera?"／カメラ："+camera:""),"実施できなかった理由と生活上の負担を確認");
+  if(increases.length)add(2,d.date,"前日より負担が増えた項目",increases.join("／")+(camera?"／カメラ："+camera:""),"増えた症状が起きた動作・時間帯・活動条件を確認");
  }
- if(comparisons.length){
-  comparisons.sort((a,b)=>b.days.length-a.days.length||a.start-b.start);
-  const win=comparisons[0],from=win.days[0],to=win.days[win.days.length-1];
-  add(3,from.date,"比較対象となる期間",from.date+"〜"+to.date+"（"+win.days.length+"日）／ケア実施・実施後「楽になった」／"+scoreSignature(from),"実施メニュー・負荷・生活状況の共通点を確認。セルフケアによる変化と断定しない");
+ let best=null;
+ for(let i=0;i<days.length;i++){
+  const start=days[i],v=values(start);
+  if(start.selfCare!=="done"||start.response!=="better"||!v.length)continue;
+  let end=i;for(let j=i+1;j<days.length;j++){
+   const d=days[j],w=values(d);
+   if(d.selfCare!=="done"||d.response!=="better"||w.length!==v.length||w.some(x=>!v.some(y=>y.name===x.name&&y.value===x.value)))break;
+   end=j;
+  }
+  if(end>i&&(!best||end-i>best.end-best.start))best={start:i,end};
  }
- items.sort((a,b)=>a.priority-b.priority||a.date.localeCompare(b.date));
- const result=items.slice(0,5).map((x,i)=>(i+1)+"．"+x.date+"｜"+x.headline+"\n  記録："+x.details+"\n  確認："+x.question);
- if(items.length>5)result.push("ほか"+(items.length-5)+"件の候補あり。詳細は日付別照合を参照");
- if(!result.length)result.push("突出した重なり・負担増加はこの7日間から抽出されませんでした。生活目標と継続条件を通常どおり確認してください。");
- result.push("※重点候補は記録された事実に基づく聞き取りの優先順です。原因やセルフケアの効果を自動判定しません。カメラ測定値は同日の照合で確認し、数値のみで優先度を決めません。");
+ if(best){
+  const from=days[best.start],to=days[best.end];
+  add(3,from.date,"比較対象となる継続期間",from.date+"〜"+to.date+"（"+(best.end-best.start+1)+"日）／セルフケア実施後「楽になった」／"+signature(from),"実施したメニュー・負荷・生活条件の共通点を確認し、変化後の継続・調整を検討");
+ }
+ const focus=items.sort((x,y)=>x.priority-y.priority||x.date.localeCompare(y.date));
+ const result=focus.slice(0,5).map((x,i)=>(i+1)+"．"+x.date+"｜"+x.title+"\n  記録："+x.details+"\n  来院時："+x.question);
+ if(focus.length>5)result.push("ほか"+(focus.length-5)+"件。日付別照合も確認してください");
+ if(!focus.length)result.push("今回の7日間では、重点候補となる重なり・負担増加を抽出できませんでした。生活目標・継続条件を確認してください。");
+ if(validCamera.length<3)result.push("カメラ値の本人内比較：有効な日別測定が3日未満のため、最高・最低値による照合は行っていません。");
+ result.push("※順位は来院時に聞き取るための便宜的な順序です。カメラ値の最高・最低はこの記録期間内の相対値で、異常判定・原因推定・セルフケア効果の判定ではありません。");
  return result;
 }
 function nextVisitCareReview(data){
