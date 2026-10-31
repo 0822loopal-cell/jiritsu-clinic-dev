@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.11.04｜STEP 300 ④セルフケア表示整理</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.11.05｜STEP 300 採用メニューを先頭表示</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -367,10 +367,10 @@ function renderOngoingWorkspace(){
  const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="まず採用中メニューを確認します。提案内容は上のチェックから入力でき、試行・採否や設定変更が必要な場合だけ下の項目を開いてください。正式な採否・設定変更は各保存ボタンで保存します。";note.style.fontSize=".85rem";root.appendChild(note);
- ongoingSelectionHelper(root,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"候補にチェックすると、下の施術記録に自動反映されます。ここでの選択は正式な採用や個別設定の保存ではありません。"});
- const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
- ongoingMoveField("session-selfcare",root);
  ongoingMovePanel("selfcare-trial-panel",root);
+ const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
+ ongoingSelectionHelper(root,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"候補にチェックすると、下の施術記録に自動反映されます。ここでの選択は正式な採用や個別設定の保存ではありません。"});
+ ongoingMoveField("session-selfcare",root);
  }else if(ongoingStep===4){
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
  const date=document.createElement("p");date.textContent="対象来院日："+(document.getElementById("session-date").value||"未設定");root.appendChild(date);
