@@ -28,7 +28,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.76｜STEP 238 重点確認ポイントの複数領域照合</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>開発版 Ver.0.10.77｜STEP 239 重点確認と採用中セルフケアの連携</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -554,6 +554,32 @@ lines.push("","【セルフケア｜現在の管理状況】","採用中："+(ac
 lines.push("","【直近の週間経過｜来院時チェック】",nextVisitWeeklyDigest(data));
 return lines.join("\n");
 }
+function nextVisitCarePlanLink(data){
+ const trials=Array.isArray(data.selfcareTrials)?data.selfcareTrials:[],changes=Array.isArray(data.selfcarePlanChanges)?data.selfcarePlanChanges:[],events=Array.isArray(data.selfcareStateHistory)?data.selfcareStateHistory:[];
+ const newestByItem=(list)=>{const out=new Map();for(let i=0;i<list.length;i++){const x=list[i];if(!x?.item)continue;const prev=out.get(x.item);if(!prev||String(x.savedAt||"")>String(prev.value.savedAt||"")||(String(x.savedAt||"")===String(prev.value.savedAt||"")&&i>prev.index))out.set(x.item,{value:x,index:i});}return new Map([...out].map(([k,v])=>[k,v.value]));};
+ const byTrial=newestByItem(trials),byChange=newestByItem(changes),byEvent=newestByItem(events);
+ const rows=["【現在のセルフケアと再検討対象】"];
+ const active=[],paused=[];
+ for(const [id,t] of byTrial){
+  const event=byEvent.get(id),change=byChange.get(id);
+  const useEvent=!!event&&String(event.savedAt||"")>String(t.savedAt||"");
+  const state=useEvent?event.to:(t.decision==="採用"?"採用中":t.decision==="保留"?"一時保留":"不採用");
+  if(state==="不採用"&&!useEvent)continue;
+  let plan=t.plan||"",planDate=String(t.savedAt||"");
+  if(change&&String(change.savedAt||"")>planDate){plan=change.after||plan;planDate=String(change.savedAt||"");}
+  if(useEvent&&state==="採用中"&&String(event.savedAt||"")>planDate)plan=event.plan||plan;
+  const changeDate=change?.date||change?.savedAt?.slice(0,10)||null;
+  const item=id+"｜"+scTrialName(id)+"｜"+state+(state==="採用中"?"\n  現在の設定："+(plan||"未設定"):"")+(changeDate?"\n  直近の設定変更："+changeDate+(change.reason?"／理由："+change.reason:""):"");
+  if(state==="採用中")active.push(item);else paused.push(item);
+ }
+ rows.push("採用中："+(active.length?active.length+"件":"なし"));
+ if(active.length)rows.push(...active.sort());
+ if(paused.length)rows.push("","保留・中止等："+paused.length+"件",...paused.sort());
+ const share=(Array.isArray(data.weeklyShares)?data.weeklyShares:[]).filter(x=>x&&typeof x.period==="string").sort((a,b)=>b.period.localeCompare(a.period))[0];
+ if(share)rows.push("","照合対象："+share.period,"週間サマリーの「実施」「楽になった」は、個別メニューの実施履歴ではありません。どのメニューをどの条件で実施したかを本人に確認してください。");
+ rows.push("","【来院時の再検討 → 記録 → 次週比較】","① 上の重点確認ポイントをもとに、採用中の各メニューの実施状況・負荷・反応を聞き取る。","② 施術者が継続・設定変更・保留・中止・再開を判断する。","③ 判断結果は下の「セルフケア試行・採否記録」にある既存の設定変更・状態変更機能で保存する。","④ 次回の週間データと変更日を照合し、生活目標・症状・本人の反応を再評価する。","※このカードは参照専用です。表示しただけで設定や保存内容を変更しません。");
+ return rows.join("\n");
+}
 function renderNextVisitCards(box,data){
  box.replaceChildren();
  const summary=nextVisitSummary(data);
@@ -584,6 +610,11 @@ function renderNextVisitCards(box,data){
    const title=document.createElement("h4");title.textContent="②-A 週間データを活かす｜セルフケア再検討";title.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";review.append(title);
    const body=document.createElement("div");body.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";body.textContent=nextVisitCareReview(data);review.append(body);
    box.append(review);
+   const link=document.createElement("section");link.style.cssText="padding:14px 16px;margin:0 0 12px;background:#fff;border:2px solid #9ebcb3;border-radius:10px";
+   const heading=document.createElement("h4");heading.textContent="②-B 採用中セルフケアと変更履歴｜再検討への接続";heading.style.cssText="margin:0 0 8px;color:#244a49;font-size:1rem";link.append(heading);
+   const content=document.createElement("div");content.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.94rem";content.textContent=nextVisitCarePlanLink(data);link.append(content);
+   const move=document.createElement("button");move.type="button";move.className="test-action";move.textContent="既存のセルフケア設定・変更記録へ移動";move.style.marginTop="12px";move.onclick=()=>{if(!unlocked||!selectedClientNo)return;const panel=document.getElementById("selfcare-trial-panel");if(!panel)return;panel.scrollIntoView({behavior:"smooth",block:"start"});const h=panel.querySelector("h3");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true});}};link.append(move);
+   box.append(link);
   }
  }
  const footer=document.createElement("p");footer.style.cssText="font-size:12px;color:#607575;margin:4px 0 0";footer.textContent="保存済み記録を整理して表示しています。未評価・未入力は自動判定ではありません。";box.append(footer);
