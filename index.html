@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.38</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.39</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -269,7 +269,7 @@ function ongoingMovePanel(id,to){
  to.appendChild(node);
  if(id==="selfcare-trial-panel")node.hidden=false;
 }
-async function ongoingLatestAssessmentSummary(data){
+function ongoingLatestAssessmentSummary(data){
  const records=Array.isArray(data.assessments)?data.assessments:[];
  const groups=[
   ["① 安静時",["restVertigo","restBalance"]],
@@ -290,7 +290,7 @@ async function ongoingLatestAssessmentSummary(data){
  result.push("※領域ごとに記録日が異なる場合があります。未実施の項目は補完しません。");
  return result.join("\n");
 }
-function ongoingShowPreparation(root){
+async function ongoingShowPreparation(root){
  const no=selectedClientNo,key=activeKey;if(!unlocked||!key||!no)return;
  const contents=document.createElement("div");contents.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7";contents.textContent="保存済みの情報を読み込み中…";root.appendChild(contents);
  try{const data=await readClientData(no,key);if(!unlocked||activeKey!==key||selectedClientNo!==no||ongoingStep!==0||!root.isConnected)return;
