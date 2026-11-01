@@ -278,7 +278,7 @@ async function ongoingLatestAssessmentSummary(data){
   ["④ 生活機能",["lifeActivity","lifeMinutes","lifeAvoidance","lifeGoalScore"]]
  ];
  const result=["【4領域評価｜各領域の直近記録（参照用）】"];
- if(!records.length)return result.concat("評価履歴はありません。").join("\\n");
+ if(!records.length)return result.concat("評価履歴はありません。").join("\n");
  const sorted=records.map((record,index)=>({record,index})).filter(x=>x.record&&typeof x.record==="object").sort((a,b)=>String(b.record.date||"").localeCompare(String(a.record.date||""))||String(b.record.savedAt||"").localeCompare(String(a.record.savedAt||""))||b.index-a.index);
  for(const [title,fields] of groups){
   const found=sorted.find(x=>fields.some(f=>x.record.values?.[f]!==""&&x.record.values?.[f]!=null));
@@ -288,7 +288,7 @@ async function ongoingLatestAssessmentSummary(data){
   for(const f of fields)if(values[f]!==""&&values[f]!=null)result.push("  "+(assessmentCompareLabels[f]||f)+"："+values[f]);
  }
  result.push("※領域ごとに記録日が異なる場合があります。未実施の項目は補完しません。");
- return result.join("\\n");
+ return result.join("\n");
 }
 function ongoingShowPreparation(root){
  const no=selectedClientNo,key=activeKey;if(!unlocked||!key||!no)return;
