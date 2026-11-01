@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.32</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.33</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -378,6 +378,8 @@ function renderOngoingWorkspace(){
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="採用中メニューと設定を確認し、必要に応じて試行・採否や設定変更を記録します。セルフケアの提案は下の候補から選べます。";note.style.fontSize=".85rem";root.appendChild(note);
  ongoingMovePanel("selfcare-trial-panel",root);
+ const legacyJump=document.querySelector("#selfcare-trial-panel button[data-workflow-target=\"session-next\"]");
+ if(legacyJump){const marker=document.createComment("ongoing-legacy-jump");legacyJump.parentNode.insertBefore(marker,legacyJump);ongoingMoved.push({node:legacyJump,marker,wasHidden:legacyJump.hidden});legacyJump.hidden=true;}
  const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
  const careChoices=document.createElement("details");careChoices.style.cssText="margin:10px 0;border:1px solid #cbdad6;border-radius:8px;padding:10px;background:#fff";const careSummary=document.createElement("summary");careSummary.textContent="29候補から提案メニューを選ぶ（必要な場合に開く）";careSummary.style.cursor="pointer";careSummary.style.fontWeight="bold";careChoices.appendChild(careSummary);root.appendChild(careChoices);
  ongoingSelectionHelper(careChoices,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"選択内容は下の施術記録に反映されます。正式な採否・設定変更は別途保存してください。"});
