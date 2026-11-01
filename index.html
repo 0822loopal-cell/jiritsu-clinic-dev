@@ -309,7 +309,7 @@ async function ongoingShowPreparation(root){
  quick.textContent=nextVisitQuickView(data);quick.style.cssText="padding:12px;margin-bottom:12px;background:#f0f7f3;border:1px solid #b7cfc5;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere";
  contents.appendChild(quick);
  showSection("医療対応・症状カテゴリー評価｜直近",categoryLatestSummary(data),true);
- showSection("前回の施術記録・過去の申し送り",document.getElementById("session-previous").textContent+"\\n\\n"+document.getElementById("session-handoff").textContent,true);
+ showSection("前回の施術記録・過去の申し送り",document.getElementById("session-previous").textContent+"\n\n"+document.getElementById("session-handoff").textContent,true);
  showSection("4領域評価｜各領域の直近記録",ongoingLatestAssessmentSummary(data),false);
  showSection("セルフケア｜現在の設定・再検討対象",nextVisitCarePlanLink(data),false);
  }catch(e){if(ongoingStep===0&&selectedClientNo===no)contents.textContent="読み込み失敗："+e.message;}
