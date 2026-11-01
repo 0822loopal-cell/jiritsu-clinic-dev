@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.35</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.36</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -367,6 +367,7 @@ function renderOngoingWorkspace(){
  if(!choices.length){const msg=document.createElement("p");msg.textContent="保存済みの施術記録はありません。";picker.appendChild(msg);}
  for(const {item,index} of choices){const button=document.createElement("button");button.type="button";button.className="test-action";button.textContent="記録 "+(index+1)+"｜"+(item.date||"日付なし")+"｜"+(item.status==="complete"?"完了":"作成中")+(editingSessionIndex===index?"（選択中）":"");button.addEventListener("click",()=>{editSession(index);if(editingSessionIndex===index)renderOngoingWorkspace();});picker.appendChild(button);}
  root.appendChild(picker);
+ const newSessionButton=document.createElement("button");newSessionButton.type="button";newSessionButton.className="test-action";newSessionButton.textContent="新規記録に切り替える";newSessionButton.disabled=editingSessionIndex===null;newSessionButton.addEventListener("click",()=>{if(!confirmSessionSwitch())return;resetSessionForm();document.getElementById("session-status").textContent="新規記録の入力に切り替えました。";renderOngoingWorkspace();});root.appendChild(newSessionButton);
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
  for(const id of ["session-date","session-visitState","session-sinceLast","session-priority"])ongoingMoveField(id,root);
  const note=document.createElement("p");note.textContent="既存の入力欄をそのまま表示しています。工程切替では保存されません。";note.style.fontSize=".85rem";root.appendChild(note);
