@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.19</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.20</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1111,7 +1111,12 @@ function clearCategoryRule(){
 function categoryFlags(){const f={};for(const k of Object.keys(categoryFlagNames))f[k]=document.getElementById("category-flag-"+k).value;return f;}
 function categoryInputs(){const x={};for(const k of categoryFields)x[k]=document.getElementById("category-"+k).value.trim();return x;}
 function categoryRuleCheck(data,values,flags){
- const name=(data.intake?.diagnosis||"").trim(),points=[],questions=[],issues=[],risks=[];
+ const intake=data.intake||{},name=(intake.diagnosis||"").trim(),points=[],questions=[],issues=[],risks=[];
+ if(intake.onset)points.push("既存ヒアリングの発症・経過："+intake.onset.slice(0,180));
+ if(intake.vertigoDuration)points.push("既存ヒアリングのめまい持続時間："+intake.vertigoDuration);
+ if(intake.vertigoTriggers)points.push("既存ヒアリングの誘発条件："+intake.vertigoTriggers.slice(0,160));
+ if(intake.balanceRecovery)points.push("既存ヒアリングのふらつき回復："+intake.balanceRecovery.slice(0,160));
+ if(intake.daily)points.push("既存ヒアリングの生活上の困りごと："+intake.daily.slice(0,160));
  const positives=Object.keys(flags).filter(k=>flags[k]==="yes"),unknown=Object.keys(flags).filter(k=>!flags[k]);
  if(positives.length){risks.push("確認が必要な徴候："+positives.map(k=>categoryFlagNames[k]).join("・"));questions.push("発生日時、現在の状況、受診状況を優先確認する。");}
  if(unknown.length){risks.push("未確認："+unknown.map(k=>categoryFlagNames[k]).join("・"));questions.push("未確認の徴候を確認してから通常評価の可否を判断する。");}
