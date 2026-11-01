@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.24</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.25</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1072,7 +1072,7 @@ function updateVisitSummaries(){let count=0;for(let i=1;i<=3;i++){const date=doc
 const categoryChoices={"visitStatus":["未受診","受診済み・診断名あり","受診済み・診断名なし","受診予定・検査結果待ち","受診状況不明"],"onsetMode":["突然","徐々に","不明"],"change":["発症時と同じ","変化した","新たな症状が加わった","不明"],"pattern":["特定条件で発作的に生じる","自発的に繰り返す","持続する","持続し時々強くなる","複合・分類困難"],"frequency":["毎日","週に数回","月に数回","不定期","持続的","不明"],"duration":["数秒","1分未満","1〜5分","5〜20分","20〜60分","1時間超","持続的","不明"],"recovery":["1分未満","1〜5分","5〜20分","20〜60分","1時間超","普段の状態に戻らない","不明"],"trend":["改善傾向","変化なし","悪化傾向","変動","不明"],"safety":["通常の評価を検討","医療機関への相談・受診を優先","緊急の医療対応を優先","追加確認まで判断保留"],"alignment":["既存医療情報と概ね整合","医療情報の追加確認が必要","医療機関への再相談を検討","未受診・未確定のため対象外","判断保留"]};
 const categoryFields=["visitStatus","onsetMode","change","pattern","frequency","duration","recovery","trend","safety","alignment","trigger","aggravation","associated","reason","followup"];
 const categoryTitles={"visitStatus":"受診状況","onsetMode":"発症様式","change":"発症時と現在の違い","pattern":"主な症状パターン","frequency":"頻度","duration":"強い症状の持続時間","recovery":"普段の状態に戻るまでの時間","trend":"最近の経過","trigger":"症状を新たに起こす条件（誘発）","aggravation":"既存の症状を強める条件（増悪）","associated":"随伴症状・急な聴覚変化・神経症状・循環器症状など","safety":"医療対応の優先確認（必須）","alignment":"医療情報との整合性（必須）","reason":"判断根拠・確認した内容（必須）","followup":"受診案内・次回確認・4領域評価への申し送り"};
-function clearCategoryAssessment(){for(const k of Object.keys(categoryFlagNames))document.getElementById("category-flag-"+k).value="";clearCategoryRule();document.getElementById("category-date").value="";for(const field of categoryFields)document.getElementById("category-"+field).value="";document.getElementById("category-status").textContent="未保存です。";document.getElementById("category-intake-summary").textContent="ヒアリング参照を読み込み中";}
+function clearCategoryAssessment(){categoryAutoFlagsText="";for(const k of Object.keys(categoryFlagNames))document.getElementById("category-flag-"+k).value="";clearCategoryRule();document.getElementById("category-date").value="";for(const field of categoryFields)document.getElementById("category-"+field).value="";document.getElementById("category-status").textContent="未保存です。";document.getElementById("category-intake-summary").textContent="ヒアリング参照を読み込み中";}
 function categorySnapshot(data){const x=data.intake||{};return {updatedAt:data.intakeUpdatedAt||null,diagnosis:x.diagnosis||"",onset:x.onset||"",detailGroups:Array.isArray(x.detailGroups)?[...x.detailGroups]:[],vertigoDuration:x.vertigoDuration||"",vertigoTriggers:x.vertigoTriggers||"",balanceScenes:x.balanceScenes||"",balanceRecovery:x.balanceRecovery||"",daily:x.daily||"",medical:x.medical||"",visits:[1,2,3].map(n=>({date:x["visit"+n+"Date"]||"",place:x["visit"+n+"Place"]||"",tests:x["visit"+n+"Tests"]||"",explanation:x["visit"+n+"Explanation"]||""})).filter(v=>v.date||v.place||v.tests||v.explanation)};}
 function categorySummary(x){const groups={vertigo:"めまい",balance:"ふらつき",tinnitus:"耳鳴り"};return "【初回ヒアリングの参照情報】\n診断名："+(x.diagnosis||"未登録")+"\n発症・経過："+(x.onset||"未登録")+"\n主な症状："+((x.detailGroups||[]).map(y=>groups[y]||y).join("・")||"未確認")+"\nめまい持続時間："+(x.vertigoDuration||"未登録")+"\n誘発条件："+(x.vertigoTriggers||"未登録")+"\nふらつき場面："+(x.balanceScenes||"未登録")+"\nふらつき回復："+(x.balanceRecovery||"未登録")+"\n受診歴："+(x.visits||[]).length+"件\n生活上の困りごと："+(x.daily||"未登録");}
 function categoryLatestRecord(data){
@@ -1120,7 +1120,7 @@ document.getElementById("category-save").onclick=async()=>{
 
 
 const categoryFlagNames={neuro:"新たな神経症状",hearing:"突然の聴力低下",acute:"急性持続性めまい・強い歩行障害",cardiac:"失神・胸痛等"};
-let categoryRuleCache=null;
+let categoryRuleCache=null;let categoryAutoFlagsText="";
 function clearCategoryRule(){
  categoryRuleCache=null;document.getElementById("category-rule-result").textContent="未照合（入力後に照合してください）";document.getElementById("category-copy-reason").disabled=true;
 }
@@ -1171,7 +1171,7 @@ function categoryRuleCheck(data,values,flags){
 }
 document.getElementById("category-analyze").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!no||!key||!unlocked)return;const el=document.getElementById("category-rule-result");el.textContent="照合中…";
- try{const data=await readClientData(no,key);if(!unlocked||key!==activeKey||no!==selectedClientNo)return;const flags=categoryFlags();const associated=document.getElementById("category-associated");if(!associated.value.trim())associated.value=categoryFlagsSummary(flags);categoryRuleCache=categoryRuleCheck(data,categoryInputs(),flags);el.textContent=categoryRuleCache.text;document.getElementById("category-copy-reason").disabled=false;}
+ try{const data=await readClientData(no,key);if(!unlocked||key!==activeKey||no!==selectedClientNo)return;const flags=categoryFlags();const associated=document.getElementById("category-associated");if(!associated.value.trim()||associated.value===categoryAutoFlagsText){categoryAutoFlagsText=categoryFlagsSummary(flags);associated.value=categoryAutoFlagsText;}categoryRuleCache=categoryRuleCheck(data,categoryInputs(),flags);el.textContent=categoryRuleCache.text;document.getElementById("category-copy-reason").disabled=false;}
  catch(e){clearCategoryRule();el.textContent="照合失敗："+e.message;}
 };
 document.getElementById("category-copy-reason").onclick=()=>{if(categoryRuleCache)document.getElementById("category-reason").value=categoryRuleCache.reason.slice(0,1200);};
