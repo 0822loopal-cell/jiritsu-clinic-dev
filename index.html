@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.29</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.30</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -353,12 +353,17 @@ function renderOngoingWorkspace(){
  ongoingRestoreFields();
  const root=document.getElementById("ongoing-workspace-stage"),[title,description]=ongoingStages[ongoingStep];
  root.replaceChildren();const h=document.createElement("h4");h.textContent=(ongoingStep+1)+"．"+title;const p=document.createElement("p");p.textContent=description;root.append(h,p);
+ const currentRecord=document.createElement("p");
+ currentRecord.style.cssText="margin:10px 0;padding:10px 12px;background:#eef7f2;border:1px solid #b7cfc5;border-radius:8px;font-weight:700";
+ const activeSession=editingSessionIndex!==null?sessionCache[editingSessionIndex]:null;
+ currentRecord.textContent=activeSession?"操作対象：記録 "+(editingSessionIndex+1)+"｜"+(activeSession.date||"日付なし")+"｜"+(activeSession.status==="complete"?"完了":"作成中"):"操作対象：新規記録（未保存）";
+ root.appendChild(currentRecord);
  if(ongoingStep===0)ongoingShowPreparation(root);
  else if(ongoingStep===1){
  const picker=document.createElement("div");picker.style.cssText="border:1px solid #cbdad6;border-radius:8px;padding:12px;background:#fff;margin-bottom:12px";
- const pickerTitle=document.createElement("strong");pickerTitle.textContent="保存済み記録を選ぶ（既存記録の編集）";picker.appendChild(pickerTitle);
+ const pickerTitle=document.createElement("strong");pickerTitle.textContent="記録を選ぶ（作成中・完了済み）";picker.appendChild(pickerTitle);
  const choices=sessionCache.map((item,index)=>({item,index})).filter(x=>x.item).sort((a,b)=>String(b.item.date||"").localeCompare(String(a.item.date||""))||b.index-a.index);
- if(!choices.length){const msg=document.createElement("p");msg.textContent="作成中の記録はありません。";picker.appendChild(msg);}
+ if(!choices.length){const msg=document.createElement("p");msg.textContent="保存済みの施術記録はありません。";picker.appendChild(msg);}
  for(const {item,index} of choices){const button=document.createElement("button");button.type="button";button.className="test-action";button.textContent="記録 "+(index+1)+"｜"+(item.date||"日付なし")+"｜"+(item.status==="complete"?"完了":"作成中")+(editingSessionIndex===index?"（選択中）":"");button.addEventListener("click",()=>{editSession(index);if(editingSessionIndex===index)renderOngoingWorkspace();});picker.appendChild(button);}
  root.appendChild(picker);
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
