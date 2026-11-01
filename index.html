@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.33</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.34</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -378,6 +378,21 @@ function renderOngoingWorkspace(){
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="採用中メニューと設定を確認し、必要に応じて試行・採否や設定変更を記録します。セルフケアの提案は下の候補から選べます。";note.style.fontSize=".85rem";root.appendChild(note);
  ongoingMovePanel("selfcare-trial-panel",root);
+ const carePanel=document.getElementById("selfcare-trial-panel");
+ const adopted=document.getElementById("sc-current-adopted");
+ const actions=document.createElement("details");
+ actions.style.cssText="margin:12px 0;border:1px solid #b7cfc5;border-radius:8px;padding:12px;background:#f8fbfa";
+ const actionsTitle=document.createElement("summary");
+ actionsTitle.textContent="セルフケアの変更・履歴を開く（必要な場合）";
+ actionsTitle.style.cssText="cursor:pointer;font-weight:bold";
+ actions.appendChild(actionsTitle);
+ adopted.after(actions);
+ for(const node of [...carePanel.querySelectorAll(".sc-workflow-disclosure")]){
+  const marker=document.createComment("ongoing-selfcare-action");
+  node.parentNode.insertBefore(marker,node);
+  ongoingMoved.push({node,marker});
+  actions.appendChild(node);
+ }
  const legacyJump=document.querySelector("#selfcare-trial-panel button[data-workflow-target=\"session-next\"]");
  if(legacyJump){const marker=document.createComment("ongoing-legacy-jump");legacyJump.parentNode.insertBefore(marker,legacyJump);ongoingMoved.push({node:legacyJump,marker,wasHidden:legacyJump.hidden});legacyJump.hidden=true;}
  const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
