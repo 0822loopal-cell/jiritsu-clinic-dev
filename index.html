@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.13</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.14</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -236,7 +236,7 @@ function showClientView(id){
  if(!unlocked||!selectedClientNo)return;
  if(id&&!document.getElementById(id))return;
  if(id!=="ongoing-workspace"){ongoingRestoreFields();document.getElementById("ongoing-workspace").hidden=true;}
- for(const panelId of clientViewPanelIds)document.getElementById(panelId).hidden=panelId!==(id||"life-goal-panel");
+ for(const panelId of clientViewPanelIds)document.getElementById(panelId).hidden=panelId!==(id||"life-goal-panel")&&!(id==="selfcare-trial-panel"&&panelId==="selfcare-check-panel");
  document.getElementById("client-detail-summary").hidden=!!id;
  document.getElementById("ongoing-workspace").hidden=id!=="ongoing-workspace";
  document.querySelectorAll("#client-detail button[data-jump-target],#client-main-nav button[data-client-overview]").forEach(button=>{
