@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.31</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.32</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -253,7 +253,7 @@ function handleClientJump(event){
  showClientView(button.dataset.jumpTarget);
 }
 const ongoingStages=[["来院前チェック","週間経過・生活目標・前回記録・申し送りを確認する工程です。"],["当日の状態確認","来院日の確認、現在の困りごと、前回からの変化を記録する工程です。"],["施術・再評価","当日の実施内容・選択理由・反応・再評価を記録する工程です。"],["セルフケア調整","採用中メニュー・実施条件・変更履歴を確認する工程です。"],["申し送り・保存","次回来院時の確認事項と、途中保存・完了を扱う工程です。"]];let ongoingStep=0;const ongoingMoved=[];
-function ongoingRestoreFields(){for(const x of ongoingMoved.splice(0)){x.marker.parentNode?.insertBefore(x.node,x.marker);x.marker.remove();}}
+function ongoingRestoreFields(){for(const x of ongoingMoved.splice(0)){x.marker.parentNode?.insertBefore(x.node,x.marker);if(x.wasHidden!==undefined)x.node.hidden=x.wasHidden;x.marker.remove();}}
 function ongoingMoveField(id,to){
  const control=document.getElementById(id);if(!control)return;
  const label=document.querySelector('label[for="'+id+'"]');
@@ -265,8 +265,9 @@ function ongoingMovePanel(id,to){
  const node=document.getElementById(id);if(!node)return;
  const marker=document.createComment("ongoing-original-panel-"+id);
  node.parentNode.insertBefore(marker,node);
- ongoingMoved.push({node,marker});
+ ongoingMoved.push({node,marker,wasHidden:node.hidden});
  to.appendChild(node);
+ if(id==="selfcare-trial-panel")node.hidden=false;
 }
 async function ongoingShowPreparation(root){
  const no=selectedClientNo,key=activeKey;if(!unlocked||!key||!no)return;
@@ -356,7 +357,7 @@ function renderOngoingWorkspace(){
  const currentRecord=document.createElement("p");
  currentRecord.style.cssText="margin:10px 0;padding:10px 12px;background:#eef7f2;border:1px solid #b7cfc5;border-radius:8px;font-weight:700";
  const activeSession=editingSessionIndex!==null?sessionCache[editingSessionIndex]:null;
- currentRecord.textContent=activeSession?"操作対象：記録 "+(editingSessionIndex+1)+"｜"+(activeSession.date||"日付なし")+"｜"+(activeSession.status==="complete"?"完了":"作成中"):"操作対象：新規記録（未保存）";
+ currentRecord.textContent=activeSession?"操作対象：記録 "+(editingSessionIndex+1)+"｜"+(activeSession.date||"日付なし")+"｜"+(activeSession.status==="complete"?"完了":"作成中"):ongoingStep===1?"操作対象：未選択（既存記録を選択するか、新規作成します）":"操作対象：未選択（② 状態で記録を選択、または新規作成してください）";
  if(ongoingStep!==0)root.appendChild(currentRecord);
  if(ongoingStep===0)ongoingShowPreparation(root);
  else if(ongoingStep===1){
@@ -375,10 +376,11 @@ function renderOngoingWorkspace(){
  for(const id of ["session-interventions","session-response","session-reevaluation"])ongoingMoveField(id,root);
  const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===3){
- const note=document.createElement("p");note.textContent="まず採用中メニューを確認します。提案内容は上のチェックから入力でき、試行・採否や設定変更が必要な場合だけ下の項目を開いてください。正式な採否・設定変更は各保存ボタンで保存します。";note.style.fontSize=".85rem";root.appendChild(note);
+ const note=document.createElement("p");note.textContent="採用中メニューと設定を確認し、必要に応じて試行・採否や設定変更を記録します。セルフケアの提案は下の候補から選べます。";note.style.fontSize=".85rem";root.appendChild(note);
  ongoingMovePanel("selfcare-trial-panel",root);
  const label=document.createElement("h4");label.textContent="施術記録に残すセルフケアの提案";root.appendChild(label);
- ongoingSelectionHelper(root,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"候補にチェックすると、下の施術記録に自動反映されます。ここでの選択は正式な採用や個別設定の保存ではありません。"});
+ const careChoices=document.createElement("details");careChoices.style.cssText="margin:10px 0;border:1px solid #cbdad6;border-radius:8px;padding:10px;background:#fff";const careSummary=document.createElement("summary");careSummary.textContent="29候補から提案メニューを選ぶ（必要な場合に開く）";careSummary.style.cursor="pointer";careSummary.style.fontWeight="bold";careChoices.appendChild(careSummary);root.appendChild(careChoices);
+ ongoingSelectionHelper(careChoices,{kind:"care",field:"session-selfcare",prefix:"【提案メニュー】",title:"セルフケア候補の選択補助（複数選択可）",explanation:"選択内容は下の施術記録に反映されます。正式な採否・設定変更は別途保存してください。"});
  ongoingMoveField("session-selfcare",root);
  }else if(ongoingStep===4){
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
