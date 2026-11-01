@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.15</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.16</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1075,7 +1075,7 @@ const categoryTitles={"visitStatus":"受診状況","onsetMode":"発症様式","c
 function clearCategoryAssessment(){document.getElementById("category-date").value="";for(const field of categoryFields)document.getElementById("category-"+field).value="";document.getElementById("category-status").textContent="未保存です。";document.getElementById("category-intake-summary").textContent="ヒアリング参照を読み込み中";}
 function categorySnapshot(data){const x=data.intake||{};return {updatedAt:data.intakeUpdatedAt||null,diagnosis:x.diagnosis||"",onset:x.onset||"",detailGroups:Array.isArray(x.detailGroups)?[...x.detailGroups]:[],vertigoDuration:x.vertigoDuration||"",vertigoTriggers:x.vertigoTriggers||"",balanceScenes:x.balanceScenes||"",balanceRecovery:x.balanceRecovery||"",daily:x.daily||"",medical:x.medical||"",visits:[1,2,3].map(n=>({date:x["visit"+n+"Date"]||"",place:x["visit"+n+"Place"]||"",tests:x["visit"+n+"Tests"]||"",explanation:x["visit"+n+"Explanation"]||""})).filter(v=>v.date||v.place||v.tests||v.explanation)};}
 function categorySummary(x){return "【初回ヒアリングの参照情報】\n診断名："+(x.diagnosis||"未登録")+"\n発症・経過："+(x.onset||"未登録")+"\n主な症状："+(x.detailGroups||[]).join("・")+"\nめまい持続時間："+(x.vertigoDuration||"未登録")+"\n誘発条件："+(x.vertigoTriggers||"未登録")+"\nふらつき場面："+(x.balanceScenes||"未登録")+"\nふらつき回復："+(x.balanceRecovery||"未登録")+"\n受診歴："+(x.visits||[]).length+"件\n生活上の困りごと："+(x.daily||"未登録");}
-function categoryDisplay(field,value){return categoryChoices[field]?.[Number(value)]??value??"";}
+function categoryDisplay(field,value){if(value===undefined||value===null||value==="")return "";return categoryChoices[field]?.[Number(value)]??value;}
 async function loadCategoryAssessments(no){
  const key=activeKey;if(!unlocked||!key||selectedClientNo!==no)return;
  const history=document.getElementById("category-history");
