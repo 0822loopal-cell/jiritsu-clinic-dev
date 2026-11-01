@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.34</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.35</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -405,7 +405,7 @@ function renderOngoingWorkspace(){
  ongoingMoveField("session-next",root);
  const note=document.createElement("p");note.textContent="ここでの保存操作は既存の施術・サポート記録を保存・更新します。セルフケアの採否や個別設定は④の各保存ボタンで管理します。";note.style.fontSize=".85rem";root.appendChild(note);
  for(const id of ["session-save","session-complete","session-new","session-status"])ongoingMovePanel(id,root);
- const audit=document.createElement("section");audit.style.cssText="margin-top:16px;padding:12px;border:1px solid #cbdad6;border-radius:9px;background:#fff";const heading=document.createElement("h4");heading.textContent="保存済み記録の確認（読み取り専用）";const reload=document.createElement("button");reload.type="button";reload.className="test-action";reload.textContent="保存済み記録を再読み込み";const content=document.createElement("div");audit.append(heading,reload,content);root.appendChild(audit);reload.addEventListener("click",()=>ongoingShowSavedSessionAudit(content));ongoingShowSavedSessionAudit(content);
+ const audit=document.createElement("details");audit.style.cssText="margin-top:16px;padding:12px;border:1px solid #cbdad6;border-radius:9px;background:#fff";const heading=document.createElement("summary");heading.style.cssText="cursor:pointer;font-weight:700";heading.textContent="保存済み記録を見る（"+sessionCache.length+"件・読み取り専用）";const reload=document.createElement("button");reload.type="button";reload.className="test-action";reload.textContent="保存済み記録を再読み込み";const content=document.createElement("div");audit.append(heading,reload,content);root.appendChild(audit);audit.addEventListener("toggle",()=>{if(audit.open)ongoingShowSavedSessionAudit(content);});reload.addEventListener("click",()=>ongoingShowSavedSessionAudit(content));
  }
  document.querySelectorAll("#ongoing-workspace-tabs [data-ongoing-step]").forEach(button=>{const active=Number(button.dataset.ongoingStep)===ongoingStep;button.setAttribute("aria-pressed",String(active));button.style.background=active?"#d9eee5":"";button.style.borderColor=active?"#487d6b":"";});
  document.getElementById("ongoing-workspace-prev").disabled=ongoingStep===0;document.getElementById("ongoing-workspace-next").disabled=ongoingStep===ongoingStages.length-1;
