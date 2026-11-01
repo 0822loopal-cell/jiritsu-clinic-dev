@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.18</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.19</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1099,7 +1099,7 @@ document.getElementById("category-save").onclick=async()=>{
  if(flags.hearing==="yes"&&values.safety==="0"){status.textContent="突然の聴力低下が疑われます。通常評価は選べません。";return;}
  if(Object.values(flags).some(v=>!v)&&values.safety==="0"){status.textContent="未確認の医療対応項目があります。通常評価は選べません。";return;}
  feedback(button,true,"保存中…");
- try{const data=await readClientData(no,key);if(!Array.isArray(data.symptomCategoryAssessments))data.symptomCategoryAssessments=[];data.symptomCategoryAssessments.push({date,values,flags,ruleAudit:{text:categoryRuleCache.text,priority:categoryRuleCache.priority,checkedAt:categoryRuleCache.checkedAt,inputUpdatedAt:categoryRuleCache.inputUpdatedAt},intakeSnapshot:categorySnapshot(data),savedAt:new Date().toISOString()});const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;clearCategoryAssessment();await loadCategoryAssessments(no);status.textContent="症状カテゴリー評価を履歴に追加保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
+ try{const data=await readClientData(no,key);if((data.intakeUpdatedAt||null)!==categoryRuleCache.inputUpdatedAt){status.textContent="ヒアリングが照合後に更新されています。再照合してください。";return;}if(!Array.isArray(data.symptomCategoryAssessments))data.symptomCategoryAssessments=[];data.symptomCategoryAssessments.push({date,values,flags,ruleAudit:{text:categoryRuleCache.text,priority:categoryRuleCache.priority,checkedAt:categoryRuleCache.checkedAt,inputUpdatedAt:categoryRuleCache.inputUpdatedAt},intakeSnapshot:categorySnapshot(data),savedAt:new Date().toISOString()});const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;clearCategoryAssessment();await loadCategoryAssessments(no);status.textContent="症状カテゴリー評価を履歴に追加保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
 };
 
 
@@ -1138,9 +1138,10 @@ function categoryRuleCheck(data,values,flags){
  if(values.change==="1"||values.change==="2")questions.push("発症時と現在の症状を分けて確認する。");
  if(values.visitStatus==="1"&&!name)issues.push("受診済み・診断名ありと回答されているが、診断名が未記録");
  const priority=positives.some(k=>k==="neuro"||k==="acute"||k==="cardiac")?"緊急医療への対応を優先する徴候あり":positives.length?"速やかな医療機関の評価を優先する徴候あり":unknown.length?"未確認が残るため判断保留":"指定徴候なし（安全の自動判定ではない）";
- const reason=[...risks,...points,...issues.map(x=>"追加確認："+x)].join("\n");
- const text="【医療対応】\n"+priority+"\n"+risks.map(x=>"・"+x).join("\n")+"\n\n【診断名との照合】\n"+(points.length?points.map(x=>"・"+x).join("\n"):"・一致点の判定情報なし")+"\n"+issues.map(x=>"・"+x).join("\n")+"\n\n【追加質問】\n"+(questions.length?questions.map(x=>"・"+x).join("\n"):"・施術者が経過と病態を確認")+"\n\n※照合結果は診断・除外診断ではありません。";
- return {priority,reason,text,flags:{...flags},values:{...values},inputUpdatedAt:data.intakeUpdatedAt||null,checkedAt:new Date().toISOString()};
+ const consistencyHint=!name?"医療情報との照合：診断名が未登録のため判定保留":issues.some(x=>x.includes("現在の持続性・長時間"))?"医療情報との照合：現在の経過について追加確認を推奨":points.length?"医療情報との照合：確認すべき特徴を抽出（整合性の確定は不可）":"医療情報との照合：対象となる個別ルールなし";
+ const reason=[...risks,consistencyHint,...points,...issues.map(x=>"追加確認："+x)].join("\n");
+ const text="【医療対応】\n"+priority+"\n"+risks.map(x=>"・"+x).join("\n")+"\n\n【医療情報との照合候補】\n"+consistencyHint+"\n\n【診断名との照合】\n"+(points.length?points.map(x=>"・"+x).join("\n"):"・一致点の判定情報なし")+"\n"+issues.map(x=>"・"+x).join("\n")+"\n\n【追加質問】\n"+(questions.length?questions.map(x=>"・"+x).join("\n"):"・施術者が経過と病態を確認")+"\n\n※照合結果は診断・除外診断ではありません。";
+ return {priority,consistencyHint,reason,text,flags:{...flags},values:{...values},inputUpdatedAt:data.intakeUpdatedAt||null,checkedAt:new Date().toISOString()};
 }
 document.getElementById("category-analyze").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!no||!key||!unlocked)return;const el=document.getElementById("category-rule-result");el.textContent="照合中…";
