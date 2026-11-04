@@ -265,7 +265,7 @@ function showClientView(id){
  target.style.scrollMarginTop=initialNav&&!initialNav.hidden?(Math.ceil(initialNav.getBoundingClientRect().height)+16)+"px":"18px";
  target.scrollIntoView({behavior:"smooth",block:"start"});
 }
-const initialStages=[{name:"来院登録",id:"visit-management"},{name:"ヒアリング",id:"intake-panel"},{name:"症状カテゴリー評価",id:"category-panel"},{name:"4領域評価・測定",id:"assessment-panel"},{name:"生活目標",id:"life-goal-panel"},{name:"セルフケア",id:"selfcare-trial-panel"},{name:"支援方針・料金・承諾",id:"support-plan-panel"},{name:"初回確認",id:"initial-completion-panel"}];
+const initialStages=[{name:"来院登録",id:"visit-management"},{name:"ヒアリング",id:"intake-panel"},{name:"症状カテゴリー評価",id:"category-panel"},{name:"4領域評価・測定",id:"assessment-panel"},{name:"生活目標",id:"life-goal-panel"},{name:"セルフケア",id:"selfcare-check-panel"},{name:"支援方針・料金・承諾",id:"support-plan-panel"},{name:"初回確認",id:"initial-completion-panel"}];
 let initialStage=0;
 async function showInitialStage(index){
  if(!unlocked||!selectedClientNo)return;
