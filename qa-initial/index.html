@@ -242,7 +242,7 @@ function showClientView(id){
  if(!unlocked||!selectedClientNo)return;
  if(id&&!document.getElementById(id))return;
  if(id!=="ongoing-workspace"){ongoingRestoreFields();document.getElementById("ongoing-workspace").hidden=true;}
- for(const panelId of clientViewPanelIds)document.getElementById(panelId).hidden=panelId!==(id||"life-goal-panel")&&!(id==="selfcare-trial-panel"&&panelId==="selfcare-check-panel");
+ for(const panelId of clientViewPanelIds)document.getElementById(panelId).hidden=panelId!==(id||"life-goal-panel")&&!(id==="selfcare-trial-panel"&&panelId==="selfcare-check-panel")&&!(id==="selfcare-check-panel"&&panelId==="selfcare-trial-panel");
  document.getElementById("client-detail-summary").hidden=!!id;
  document.getElementById("ongoing-workspace").hidden=id!=="ongoing-workspace";
  document.querySelectorAll("#client-detail button[data-jump-target],#client-main-nav button[data-client-overview]").forEach(button=>{
