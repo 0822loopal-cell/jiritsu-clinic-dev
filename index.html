@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.49-dev</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.50-dev</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -51,7 +51,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </section>
 <section id="client-detail" class="panel" hidden aria-label="クライアント個別画面"><button id="client-back" type="button" class="test-action">← HOMEの一覧へ戻る</button><h2 id="client-detail-title">クライアント概要</h2><nav id="client-workflow-nav" aria-label="業務別の入口" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 10px;padding:12px;border:2px solid #9ebcb3;border-radius:10px;background:#eef7f2"><strong style="width:100%">業務から選ぶ｜来院時の入口</strong><button type="button" class="test-action" id="initial-workflow-open">初回｜業務画面へ</button><button type="button" class="test-action" id="ongoing-workspace-open" data-ongoing-open="true">継続｜業務画面へ</button><button type="button" class="test-action" data-jump-target="monthly-review-panel">定期再評価｜記録へ</button></nav><section id="client-profile-panel" hidden style="margin:12px 0;padding:16px;border:1px solid #cbdad6;border-radius:10px;background:#f8fbfa"><h3>クライアント基本情報</h3><p>NOは変更せず、氏名・連絡先を暗号化保存します。旧記録は空欄から登録できます。</p><label for="client-profile-name">氏名（必須）</label><input id="client-profile-name" class="search" maxlength="100" autocomplete="off"><label for="client-profile-kana">フリガナ（任意）</label><input id="client-profile-kana" class="search" maxlength="100" autocomplete="off"><label for="client-profile-phone">電話番号（任意）</label><input id="client-profile-phone" class="search" maxlength="30" autocomplete="off"><label for="client-profile-email">メールアドレス（任意）</label><input id="client-profile-email" class="search" maxlength="254" autocomplete="off"><label for="client-profile-mode">初回面談形式</label><select id="client-profile-mode" class="search"><option value="">未確定</option><option value="inperson">対面</option><option value="online">オンライン</option></select><button id="client-profile-save" type="button" class="test-action">基本情報を暗号化保存</button><p id="client-profile-status" role="status"></p></section><section id="initial-workflow" aria-label="初回来院の業務ナビゲーション" hidden style="position:sticky;top:4px;z-index:8;margin:12px 0;padding:12px;border:2px solid #9ebcb3;border-radius:12px;background:#f7fcfa;box-shadow:0 4px 14px #233b391a">
 <h3 style="margin:0 0 6px">初回来院｜業務ナビゲーション</h3><button id="initial-profile-shortcut" type="button" class="test-action" style="padding:7px 10px;margin:4px 0 10px">氏名・連絡先を確認／編集</button>
-<p id="initial-step-caption" role="status" style="margin:4px 0 10px;font-size:.92rem">① 来院登録</p>
+<p id="initial-context-summary" style="margin:6px 0;font-size:.82rem;color:#385d53" role="status">保存済み情報を参照します。</p><p id="initial-step-caption" role="status" style="margin:4px 0 10px;font-size:.92rem">① 来院登録</p>
 <nav id="initial-workflow-tabs" aria-label="初回来院の工程を選択" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px"></nav>
 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><button id="initial-workflow-prev" type="button" class="test-action">前の工程</button><button id="initial-workflow-next" type="button" class="test-action">次の工程</button><button id="initial-workflow-close" type="button" class="test-action">初回ナビを閉じる</button></div>
 <p style="margin:8px 0 0;font-size:.78rem;color:#526e6b">各工程の保存ボタンで記録してください。「次の工程」は自動保存しません。最後の工程で初回完了を判定します。</p>
@@ -266,6 +266,7 @@ async function showInitialStage(index){
  document.getElementById("initial-workflow-next").disabled=initialStage===initialStages.length-1;
  showClientView(stage.id);
  if(stage.id==="support-plan-panel")await loadSupportPlans(no);
+ try{const data=await readClientData(no,activeKey);if(!unlocked||selectedClientNo!==no)return;const visit=(data.visits||[]).find(v=>v.kind==="initial");document.getElementById("initial-context-summary").textContent="NO "+no+"｜"+(data.profile?.name||"氏名未登録")+"｜"+(visit?visit.date+" "+(visitModes[visit.mode]||visit.mode):"初回来院日未登録")+"｜医療機関の診断名："+(data.intake?.diagnosis||"未登録")+"｜生活目標："+(data.lifeGoal||"未登録");if(visit){const field=stage.id==="category-panel"?"category-date":stage.id==="selfcare-trial-panel"?"sc-trial-date":stage.id==="support-plan-panel"?"support-date":null;if(field&&!document.getElementById(field).value){document.getElementById(field).value=visit.date;if(field==="support-date")renderSupportQuote();}}}catch(e){if(unlocked&&selectedClientNo===no)document.getElementById("initial-context-summary").textContent="参照情報の読み込みに失敗しました："+e.message;}
  if(stage.id==="category-panel")await loadCategoryAssessments(no);
  if(stage.id==="initial-completion-panel")await renderInitialAudit(no);
  if(stage.id==="visit-timeline-panel")await loadVisitTimeline(no);
