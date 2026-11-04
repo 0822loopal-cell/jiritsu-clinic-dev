@@ -278,13 +278,13 @@ async function showInitialStage(index){
  document.getElementById("initial-workflow-next").disabled=initialStage===initialStages.length-1;
  showClientView(stage.id);
  if(stage.id==="support-plan-panel")await loadSupportPlans(no);
- try{const data=await readClientData(no,activeKey);if(!unlocked||selectedClientNo!==no)return;const visit=(data.visits||[]).find(v=>v.kind==="initial");document.getElementById("initial-context-summary").textContent="NO "+no+"｜"+(data.profile?.name||"氏名未登録")+"｜"+(visit?visit.date+" "+(visitModes[visit.mode]||visit.mode):"初回来院日未登録")+"｜医療機関の診断名："+(data.intake?.diagnosis||"未登録")+"｜生活目標："+(data.lifeGoal||"未登録");if(visit){const field=stage.id==="category-panel"?"category-date":stage.id==="selfcare-trial-panel"?"sc-trial-date":stage.id==="support-plan-panel"?"support-date":null;if(field&&!document.getElementById(field).value){document.getElementById(field).value=visit.date;if(field==="support-date")renderSupportQuote();}}}catch(e){if(unlocked&&selectedClientNo===no)document.getElementById("initial-context-summary").textContent="参照情報の読み込みに失敗しました："+e.message;}
+ try{const data=await readClientData(no,activeKey);if(!unlocked||selectedClientNo!==no)return;const visit=(data.visits||[]).find(v=>v.kind==="initial");document.getElementById("initial-context-summary").textContent="NO "+no+"｜"+(data.profile?.name||"氏名未登録")+"｜"+(visit?visit.date+" "+(visitModes[visit.mode]||visit.mode):"初回来院日未登録")+"｜医療機関の診断名："+(data.intake?.diagnosis||"未登録")+"｜生活目標："+(data.lifeGoal||"未登録");if(visit){const field=stage.id==="category-panel"?"category-date":stage.id==="selfcare-check-panel"?"sc-trial-date":stage.id==="support-plan-panel"?"support-date":null;if(field&&!document.getElementById(field).value){document.getElementById(field).value=visit.date;if(field==="support-date")renderSupportQuote();}}}catch(e){if(unlocked&&selectedClientNo===no)document.getElementById("initial-context-summary").textContent="参照情報の読み込みに失敗しました："+e.message;}
  if(stage.id==="category-panel")await loadCategoryAssessments(no);
  if(stage.id==="initial-completion-panel")await renderInitialAudit(no);
  if(stage.id==="visit-timeline-panel")await loadVisitTimeline(no);
  if(stage.id==="life-goal-panel")await loadLifeGoal(no);
  if(stage.id==="assessment-panel")await loadAssessments(no);
- if(stage.id==="selfcare-trial-panel")await loadScTrials(no);
+ if(stage.id==="selfcare-check-panel")await loadScTrials(no);
 }
 const initialTabRoot=document.getElementById("initial-workflow-tabs");
 initialStages.forEach((stage,index)=>{const b=document.createElement("button");b.type="button";b.className="test-action";b.textContent=(index+1)+" "+stage.name;b.style.cssText="white-space:nowrap;padding:8px 10px";b.onclick=()=>showInitialStage(index);initialTabRoot.appendChild(b);});
