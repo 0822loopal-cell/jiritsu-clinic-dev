@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.51-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.52-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -250,6 +250,16 @@ function showClientView(id){
   button.setAttribute("aria-pressed",String(active));
   button.style.background=active?"#d9eee5":"";
  });
+ if(id&&!document.getElementById("initial-workflow").hidden){
+  const stageIndex=initialStages.findIndex(stage=>stage.id===id);
+  if(stageIndex>=0){
+   initialStage=stageIndex;
+   document.getElementById("initial-step-caption").textContent=(stageIndex+1)+" / "+initialStages.length+"｜"+initialStages[stageIndex].name;
+   document.querySelectorAll("#initial-workflow-tabs button").forEach((b,i)=>{b.setAttribute("aria-pressed",String(i===stageIndex));b.style.background=i===stageIndex?"#d9eee5":"";});
+   document.getElementById("initial-workflow-prev").disabled=stageIndex===0;
+   document.getElementById("initial-workflow-next").disabled=stageIndex===initialStages.length-1;
+  }
+ }
  const target=id?document.getElementById(id):document.getElementById("client-detail-title");
  const initialNav=document.getElementById("initial-workflow");
  target.style.scrollMarginTop=initialNav&&!initialNav.hidden?(Math.ceil(initialNav.getBoundingClientRect().height)+16)+"px":"18px";
@@ -1279,7 +1289,7 @@ async function loadCategoryAssessments(no){
  document.getElementById("category-status").textContent=list.length+"件の評価履歴を読み込みました。";
  }catch(e){if(unlocked&&selectedClientNo===no)history.textContent="読み込み失敗："+e.message;}
 }
-document.getElementById("category-refresh").onclick=()=>{if(selectedClientNo)loadCategoryAssessments(selectedClientNo);};document.getElementById("intake-to-category").onclick=()=>showClientView("category-panel");document.getElementById("category-to-assessment").onclick=()=>showClientView("assessment-panel");
+document.getElementById("category-refresh").onclick=()=>{if(selectedClientNo)loadCategoryAssessments(selectedClientNo);};document.getElementById("intake-to-category").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("category-panel"):showInitialStage(2);document.getElementById("category-to-assessment").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("assessment-panel"):showInitialStage(3);
 document.getElementById("category-save").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const status=document.getElementById("category-status"),button=document.getElementById("category-save"),date=document.getElementById("category-date").value,values={};for(const field of categoryFields)values[field]=document.getElementById("category-"+field).value.trim();
  if(!date||values.visitStatus===""||values.safety===""||values.alignment===""||!values.reason){status.textContent="評価日・受診状況・医療優先度・医療情報との整合性・判断理由を入力してください。";return;}
