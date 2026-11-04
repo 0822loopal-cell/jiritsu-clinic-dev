@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.50-dev</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.0.11.51-dev</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -251,6 +251,8 @@ function showClientView(id){
   button.style.background=active?"#d9eee5":"";
  });
  const target=id?document.getElementById(id):document.getElementById("client-detail-title");
+ const initialNav=document.getElementById("initial-workflow");
+ target.style.scrollMarginTop=initialNav&&!initialNav.hidden?(Math.ceil(initialNav.getBoundingClientRect().height)+16)+"px":"18px";
  target.scrollIntoView({behavior:"smooth",block:"start"});
 }
 const initialStages=[{name:"来院登録",id:"visit-management"},{name:"ヒアリング",id:"intake-panel"},{name:"症状カテゴリー評価",id:"category-panel"},{name:"4領域評価・測定",id:"assessment-panel"},{name:"生活目標",id:"life-goal-panel"},{name:"セルフケア",id:"selfcare-trial-panel"},{name:"支援方針・料金・承諾",id:"support-plan-panel"},{name:"初回確認",id:"initial-completion-panel"}];
