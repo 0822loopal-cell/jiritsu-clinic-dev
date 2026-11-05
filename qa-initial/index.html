@@ -29,7 +29,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.67-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.68-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -270,13 +270,14 @@ function showClientView(id){
 }
 const initialStages=[{name:"来院登録",id:"visit-management"},{name:"ヒアリング",id:"intake-panel"},{name:"症状カテゴリー評価",id:"category-panel"},{name:"4領域評価・測定",id:"assessment-panel"},{name:"生活目標",id:"life-goal-panel"},{name:"セルフケア",id:"selfcare-check-panel"},{name:"支援方針・料金・承諾",id:"support-plan-panel"},{name:"初回確認",id:"initial-completion-panel"}];
 let initialStage=0;
-let initialMeasurementMarker=null,initialMeasurementWasHidden=false;
+let initialMeasurementMarker=null,initialMeasurementWasHidden=false,initialMeasurementWrapper=null;
 function initialRestoreMeasurement(){
  if(!initialMeasurementMarker)return;
  const panel=document.getElementById("measurement-management");
  initialMeasurementMarker.parentNode?.insertBefore(panel,initialMeasurementMarker);
  panel.hidden=initialMeasurementWasHidden;
  initialMeasurementMarker.remove();initialMeasurementMarker=null;
+ initialMeasurementWrapper?.remove();initialMeasurementWrapper=null;
 }
 function initialAttachMeasurement(){
  initialRestoreMeasurement();
@@ -289,6 +290,7 @@ function initialAttachMeasurement(){
  const heading=document.createElement("summary");
  heading.textContent="必要時の機器測定・B-BRAIN・徒手／動作評価を開く";heading.style.cssText="cursor:pointer;font-weight:700";
  details.appendChild(heading);details.appendChild(panel);assessment.appendChild(details);
+ initialMeasurementWrapper=details;
  panel.hidden=false;
 }
 async function showInitialStage(index){
@@ -308,7 +310,7 @@ async function showInitialStage(index){
  if(stage.id==="initial-completion-panel")await renderInitialAudit(no);
  if(stage.id==="visit-timeline-panel")await loadVisitTimeline(no);
  if(stage.id==="life-goal-panel")await loadLifeGoal(no);
- if(stage.id==="assessment-panel"){await loadAssessments(no);await loadMeasurements(no);}
+ if(stage.id==="assessment-panel"){await loadAssessments(no);await loadMeasurements(no);const data=await readClientData(no,activeKey);if(unlocked&&selectedClientNo===no){const visit=(data.visits||[]).find(v=>v.kind==="initial");if(visit&&!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=visit.date;}}
  if(stage.id==="selfcare-check-panel")await loadScTrials(no);
 }
 const initialTabRoot=document.getElementById("initial-workflow-tabs");
@@ -594,12 +596,20 @@ function renderMonthlyWorkspace(){
   monthlyMovePanel("measurement-management",root);
   const note=document.createElement("p");note.textContent="4領域評価は必要な領域を記録します。機器測定・B-BRAIN・徒手／動作評価は必要時のみ実施してください。既存の保存・履歴機能を使います。";note.style.cssText="padding:10px;background:#fff;border-radius:8px";
   root.insertBefore(note,document.getElementById("assessment-panel"));
+  const reviewDate=document.getElementById("visit-date").value;
+  if(reviewDate){
+   if(!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=reviewDate;
+   if(!document.getElementById("assessment-date").value)document.getElementById("assessment-date").value=reviewDate;
+  }
   loadMeasurements(selectedClientNo);
  }
  if(monthlyStep===3){
   monthlyMovePanel("monthly-review-panel",root);
   const registered=document.createElement("p");registered.textContent="定期再評価として登録した日付を指定し、既存の保存ボタンで記録します。";registered.style.cssText="padding:10px;background:#fff;border-radius:8px";
   root.insertBefore(registered,document.getElementById("monthly-review-panel"));
+  const targetDate=document.getElementById("visit-date").value;
+  if(targetDate&&!document.getElementById("review-date").value)document.getElementById("review-date").value=targetDate;
+  loadMonthlyReviews(selectedClientNo);
  const choice=document.createElement("details");choice.style.cssText="margin:12px 0;padding:12px;border:1px solid #b7cfc5;border-radius:9px;background:#fff";const choiceTitle=document.createElement("summary");choiceTitle.textContent="必要時の支援方針・料金・承諾の確認・記録";choiceTitle.style.cssText="cursor:pointer;font-weight:700";choice.appendChild(choiceTitle);root.appendChild(choice);
  monthlyMovePanel("support-plan-panel",choice);
  }
@@ -668,6 +678,8 @@ function renderOngoingWorkspace(){
  document.getElementById("assessment-panel").hidden=false;
  document.getElementById("measurement-management").hidden=false;
  loadMeasurements(selectedClientNo);
+ const sessionDay=document.getElementById("session-date").value;
+ if(sessionDay&&!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=sessionDay;
  const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="採用中メニューと設定を確認し、必要に応じて試行・採否や設定変更を記録します。セルフケアの提案は下の候補から選べます。";note.style.fontSize=".85rem";root.appendChild(note);
