@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.79-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.80-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1448,6 +1448,23 @@ function setupMeasurementForm(){
  }
 }
 setupMeasurementForm();
+const freeTextHelpExamples={"initial-assessment-reason":["未実施の理由と次回確認の条件","初回オンラインのため立位・歩行は未実施。次回対面で確認する。"],"initial-care-reason":["試行しない理由と次の判断材料","今日は状態確認を優先。動作時の反応が分かってから個別メニューを選ぶ。"],"initial-handoff":["次回来院で確認する生活動作と反応","買い物中の方向転換、活動可能時間、E01実施後の反応を確認する。"],"review-goal":["目標・現状・到達度・課題","スーパーで30分買い物する目標に対し、休憩を挟んで20分可能。未到達。"],"review-changes":["症状・動作・生活の変化と情報源","本人申告：左方向転換時の不安定感は残る。買い物時間は15分から20分に増加。"],"review-followup":["次回確認する具体的な条件と行動","方向転換時の状態、買い物時間、休息後の回復、E01実施状況を確認する。"],"measurement-reason":["実施目的、または実施しない判断の根拠","実施：立位姿勢を確認するため。／非実施：今回は聞き取りと4領域評価を優先した。"],"support-details":["支援方針・提案内容・本人への説明","方向転換時の状態を優先して確認し、E01を継続。活動と休息の配分を本人と相談した。"],"life-goal":["本人の希望を生活場面・時間・行動で具体化","近所のスーパーで途中休憩なしに30分買い物をする。"],"intake-onset":["発症時期・きっかけ・その後の変化","約3か月前に回転性めまいを自覚。現在は歩行時のふらつきが中心。"],"intake-vertigoTriggers":["誘発動作・方向・持続時間","寝返りや起き上がりで誘発。回転感は数十秒で落ち着くと本人申告。"],"intake-balanceScenes":["ふらつく場所・動作・環境","スーパーで左方向転換した時、人通りの多い通路で不安定感がある。"],"intake-balanceRecovery":["回復時間・休息の条件","立ち止まって壁を支えにすると約2分で落ち着くと本人申告。"],"intake-tinnitusPattern":["左右・音の特徴・変動条件","右耳に高音の耳鳴り。静かな夜に気になりやすい。"],"intake-tinnitusImpact":["睡眠や集中など生活への影響","就寝前に気になり、入眠に時間がかかる日がある。"],"intake-medical":["受診時期・検査・説明を本人申告として区別","本人申告：10月に耳鼻科を受診しBPPVと説明された。検査名は未確認。"],"intake-daily":["どの生活場面で何が難しいか","スーパーで方向転換すると不安定になり、買い物を15分ほどで切り上げる。"],"intake-notes":["追加で確認すべき事項","発症時と現在の違い、症状の持続時間と休憩後の回復を確認する。"],"category-trigger":["症状の誘因・動作条件","左への方向転換時にふらつきが強まる。立ち上がりでは誘発されない。"],"category-aggravation":["増悪・軽減条件と再現性","人混みや長時間の歩行で強まり、座って休むと軽減するとの申告。"],"category-associated":["随伴症状・確認済みと未確認を区別","新たな聴力低下は自覚なし。動悸や頭痛の有無は追加確認する。"],"category-reason":["カテゴリー選択の根拠・一致しない点・保留事項","方向転換で誘発するが歩行中も不安定感が続くため、単一パターンに限定せず追加確認する。"],"category-followup":["次回の質問と確認条件","寝返り時の回転感、持続時間、聴覚症状の変化を確認する。"],"assessment-gazeConditions":["実施姿勢・頭部の方向・速度・回数・反応","座位で左右各5回ゆっくり動かした。左向きで視界のぶれを自覚。"],"assessment-postureNotes":["床面・支持物・方向転換条件・観察","平坦な床で左180度転回。本人は不安定感を申告。"],"assessment-lifeAvoidance":["回避場面と理由","混雑するスーパーを避け、空いている時間に買い物している。"],"assessment-notes":["実施条件・未実施項目と理由","安静時と視線安定を確認。歩行評価はオンラインのため未実施。"],"sc-trial-conditions":["姿勢・支持物・頻度・時間・速度","椅子座位で背もたれを使用し、呼吸・脱力を1分間試行。"],"sc-trial-response":["実施中・実施後の本人の反応と観察","本人は肩の力が抜けたと申告。ふらつきの変化は確認できず。"],"sc-trial-recovery":["負荷後の回復時間と条件","座位休息約2分で実施前の状態に戻った。"],"sc-trial-reason":["採用・保留・中止の判断理由","座位で無理なく実施でき、本人が継続を希望したため採用。"],"sc-trial-plan":["自宅での姿勢・回数・時間と注意条件","椅子座位で1分、朝と就寝前。負担を感じたら中断し記録する。"],"sc-change-plan":["変更後の具体的な実施条件","朝・昼・就寝前の3回へ変更。各1分、椅子座位。"],"sc-change-reason":["実施条件を変えた根拠","本人から無理なく続けられると報告があり、昼の実施を追加した。"],"sc-state-reason":["中止・保留・再開の判断根拠","実施後の不安定感が続いたとの申告があり、いったん保留した。"],"sc-state-plan":["再開時の条件と観察事項","椅子座位で30秒から再試行し、反応と回復時間を確認する。"],"session-visitState":["今回困っている場面・症状と程度","買い物中の左方向転換でふらつく。安静時のめまいは少ない。"],"session-sinceLast":["前回からの変化・ケアの状況","E01を朝夕実施。買い物時間はやや延びたとの本人申告。"],"session-priority":["当日優先して確認する課題","左方向転換時の状態と休憩が必要になる条件を優先する。"],"session-interventions":["行った支援・実施条件・選択理由","座位で頚肩部の状態を確認し、負担の少ない範囲で整体を実施。"],"session-response":["実施中・実施後の反応と観察","本人申告：肩が軽い。観察：立ち上がり動作に明確な変化なし。"],"session-reevaluation":["同じ条件で再確認した動作と結果","平坦床で左方向転換を再確認。不安定感は残り、明確な変化なし。"],"session-selfcare":["提案内容と実施条件","E01を椅子座位で1分、朝・昼・就寝前に継続提案。"],"session-next":["次回来院で確かめる事項","買い物時間、左方向転換時の反応、E01の実施状況と休息条件を確認。"],"session-memo-input":["元の記録を消さずに追記する事実","追記：翌日の本人連絡で買い物時間が20分だったと確認した。"],"intake-visit1Tests":["受けた検査を本人申告として記載","本人申告：聴力検査、眼振検査。詳細条件は未確認。"],"intake-visit1Explanation":["医療機関から説明された内容を本人申告として記載","本人申告：経過を見ながら、必要に応じて再受診するよう説明された。"],"intake-visit2Tests":["受けた検査を本人申告として記載","本人申告：聴力検査、眼振検査。詳細条件は未確認。"],"intake-visit2Explanation":["医療機関から説明された内容を本人申告として記載","本人申告：経過を見ながら、必要に応じて再受診するよう説明された。"],"intake-visit3Tests":["受けた検査を本人申告として記載","本人申告：聴力検査、眼振検査。詳細条件は未確認。"],"intake-visit3Explanation":["医療機関から説明された内容を本人申告として記載","本人申告：経過を見ながら、必要に応じて再受診するよう説明された。"]};
+function attachFreeTextHelp(){
+ const targets=[...document.querySelectorAll("#client-detail textarea")].filter(el=>el.id!=="dlt-week-preview-input");
+ for(const field of targets){
+  if(field.dataset.helpAttached==="true")continue;
+  const item=freeTextHelpExamples[field.id]||(field.matches("[data-result]")?["何を、どの条件で確認し、どんな結果だったかを自由記述","確認条件：立位・平坦床。本人申告：左方向転換で不安定感あり。今回の所見・数値があれば併記する。"]:null);
+  if(!item)continue;
+  const details=document.createElement("details");details.className="free-text-help";
+  details.style.cssText="margin:-8px 0 16px;padding:9px 12px;border:1px solid #cbdad6;border-radius:8px;background:#f7faf9;font-size:.88rem";
+  const summary=document.createElement("summary");summary.textContent="記載のポイント・入力例を見る";summary.style.cssText="cursor:pointer;color:#285d51;font-weight:600";
+  const body=document.createElement("div");body.style.cssText="padding:9px 0 2px;line-height:1.7;white-space:pre-wrap";
+  body.textContent="記載のポイント："+item[0]+"\n入力例（架空）："+item[1]+"\n※参照専用。入力欄には自動挿入されません。";
+  details.append(summary,body);field.insertAdjacentElement("afterend",details);field.dataset.helpAttached="true";
+ }
+}
+
+attachFreeTextHelp();
 let measurementFormLoadedFor="";
 async function loadMeasurementDecisionForDate(no,date){
  if(!unlocked||!activeKey||!no||!date)return;
