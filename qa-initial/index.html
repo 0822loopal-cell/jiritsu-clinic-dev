@@ -27,10 +27,18 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 .lockpanel .status{white-space:pre-wrap;margin-top:12px;background:#f0f6f3;padding:12px;border-radius:8px}
 #home-content[hidden],#lock-panel[hidden]{display:none!important}.test-action{cursor:pointer;background:#e5f2ec;color:#204b42;border-color:#b6d3c8;margin:12px 8px 0 0}#relock{transition:background-color .14s ease,transform .1s ease,box-shadow .14s ease;touch-action:manipulation}#relock:hover{background:#c7e5d7!important;box-shadow:0 2px 6px #204b4222}#relock:active{background:#90c9b0!important;transform:translateY(2px) scale(.985)}#relock:focus-visible{outline:3px solid #287f69;outline-offset:2px}#relock.just-clicked{background:#a7d9c2!important;box-shadow:inset 0 1px 4px #204b4233}.test-action{transition:background-color .14s ease,transform .1s ease,box-shadow .14s ease;touch-action:manipulation}.test-action:not(:disabled):hover{background:#c7e5d7;box-shadow:0 2px 6px #204b4222}.test-action:not(:disabled):active{background:#90c9b0;transform:translateY(2px) scale(.985);box-shadow:inset 0 2px 4px #204b4233}.test-action:focus-visible{outline:3px solid #287f69;outline-offset:2px}.test-action:disabled{opacity:.6;cursor:not-allowed}.test-action:disabled.is-busy{cursor:progress}.test-action.is-busy{background:#b9d9cc;color:#184d3f}.test-action.just-clicked{background:#a7d9c2;box-shadow:inset 0 1px 4px #204b4233}@media(prefers-reduced-motion:reduce){.test-action{transition:none}}#client-list .client-open{display:block;text-align:left;width:100%;margin:6px 0;cursor:pointer;background:#fff;color:#204b42;border:1px solid #cbdad6}#client-detail[hidden]{display:none!important}#client-detail>section{scroll-margin-top:190px}#initial-workflow[hidden]{display:none!important}#initial-workflow:not([hidden]) ~ #intake-panel #intake-to-category,#initial-workflow:not([hidden]) ~ #category-panel #category-to-assessment,#initial-workflow:not([hidden]) ~ #selfcare-trial-panel button[data-workflow-target="session-next"]{display:none!important}#client-detail #initial-workflow-tabs button[aria-pressed="true"]{border-color:#268068;font-weight:700}#client-detail:has(#initial-workflow:not([hidden])) #client-main-nav,#client-detail:has(#initial-workflow:not([hidden])) #client-extra-menu,#client-detail:has(#ongoing-workspace:not([hidden])) #client-main-nav,#client-detail:has(#ongoing-workspace:not([hidden])) #client-extra-menu,#client-detail:has(#monthly-workspace:not([hidden])) #client-main-nav,#client-detail:has(#monthly-workspace:not([hidden])) #client-extra-menu{display:none!important}#demo-status{white-space:pre-wrap;background:#f0f6f3;padding:12px;border-radius:8px}
 #measurement-performed-fields[hidden],[data-result][hidden],[data-result-group][hidden]{display:none!important}
+
+/* Common press acknowledgement: visual feedback only, never a save-complete signal. */
+button:not(:disabled){transition:background-color .14s ease,transform .1s ease,box-shadow .14s ease;touch-action:manipulation}
+button:not(:disabled):active{transform:translateY(2px) scale(.985);filter:brightness(.92);box-shadow:inset 0 2px 5px #204b4233}
+button:not(:disabled).press-ack{background-color:#a7d9c2!important;color:#173f36!important;box-shadow:inset 0 2px 6px #204b4240!important;transform:translateY(1px)}
+button:focus-visible{outline:3px solid #287f69;outline-offset:2px}
+button:disabled{cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){button{transition:none!important}}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.81-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.82-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1813,6 +1821,16 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 window.addEventListener("beforeunload",event=>{if(!unlocked||!selectedClientNo||!sessionHasUnsavedChanges())return;event.preventDefault();event.returnValue="";});
 window.addEventListener("pageshow",()=>{if(!unlocked){pass.value="";pass.readOnly=true;}idleCheck();});
 window.addEventListener("focus",()=>{idleCheck();if(unlocked)refreshBackupReminder();});
+
+// Short acknowledgement for all enabled buttons; does not mutate field values or trigger actions.
+document.addEventListener("click",event=>{
+ const button=event.target.closest?.("button");
+ if(!button||button.disabled)return;
+ button.classList.remove("press-ack");
+ void button.offsetWidth;
+ button.classList.add("press-ack");
+ window.setTimeout(()=>button.classList.remove("press-ack"),280);
+},true);
 init();
 </script></body>
 </html>
