@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.72-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.73-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -317,7 +317,7 @@ async function showInitialStage(index){
  if(stage.id==="initial-completion-panel")await renderInitialAudit(no);
  if(stage.id==="visit-timeline-panel")await loadVisitTimeline(no);
  if(stage.id==="life-goal-panel")await loadLifeGoal(no);
- if(stage.id==="assessment-panel"){await loadAssessments(no);await loadMeasurements(no);const data=await readClientData(no,activeKey);if(unlocked&&selectedClientNo===no){const visit=(data.visits||[]).find(v=>v.kind==="initial");if(visit&&!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=visit.date;}}
+ if(stage.id==="assessment-panel"){await loadAssessments(no);await loadMeasurements(no);const data=await readClientData(no,activeKey);if(unlocked&&selectedClientNo===no){const visit=(data.visits||[]).find(v=>v.kind==="initial");if(visit){document.getElementById("measurement-date").value=visit.date;await loadMeasurementDecisionForDate(no,visit.date);}}}
  if(stage.id==="selfcare-check-panel")await loadScTrials(no);
 }
 const initialTabRoot=document.getElementById("initial-workflow-tabs");
@@ -388,6 +388,8 @@ document.getElementById("initial-complete-save").onclick=async()=>{
  if(x.assessments.length===0&&!assessmentReason)missing.push("4領域評価の未実施理由");
  if(x.trials.length===0&&!careReason)missing.push("セルフケア採否の未実施理由");
  if(x.completed?.completedAt){status.textContent="この初回は既に完了しています。重複完了は行いません。";return;}
+ const measurementDecision=(Array.isArray(data.measurementDecisions)?data.measurementDecisions:[]).find(d=>d.date===x.date);
+ if(!measurementDecision?.reason||!["performed","skipped"].includes(measurementDecision.decision))missing.push("選択的評価・測定の実施判断と理由");
  if(missing.length){status.textContent="未確認："+missing.join("／");return;}
  if(x.plan.total!==4400){status.textContent="初回料金を確認してください。初回セッションは税込4,400円です。";return;}
  data.initialCompletion={date:x.date,completedAt:new Date().toISOString(),assessmentReason:assessmentReason||"",careReason:careReason||"",handoff,version:1};
@@ -605,7 +607,8 @@ function renderMonthlyWorkspace(){
   root.insertBefore(note,document.getElementById("assessment-panel"));
   const reviewDate=document.getElementById("visit-date").value;
   if(reviewDate){
-   if(!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=reviewDate;
+   document.getElementById("measurement-date").value=reviewDate;
+   loadMeasurementDecisionForDate(selectedClientNo,reviewDate);
    if(!document.getElementById("assessment-date").value)document.getElementById("assessment-date").value=reviewDate;
   }
   loadMeasurements(selectedClientNo);
@@ -686,7 +689,7 @@ function renderOngoingWorkspace(){
  document.getElementById("measurement-management").hidden=false;
  loadMeasurements(selectedClientNo);
  const sessionDay=document.getElementById("session-date").value;
- if(sessionDay&&!document.getElementById("measurement-date").value)document.getElementById("measurement-date").value=sessionDay;
+ if(sessionDay){document.getElementById("measurement-date").value=sessionDay;loadMeasurementDecisionForDate(selectedClientNo,sessionDay);}
  const note=document.createElement("p");note.textContent="既存の施術記録の入力欄です。保存は⑤の工程で行います。";note.style.fontSize=".85rem";root.appendChild(note);
  }else if(ongoingStep===3){
  const note=document.createElement("p");note.textContent="採用中メニューと設定を確認し、必要に応じて試行・採否や設定変更を記録します。セルフケアの提案は下の候補から選べます。";note.style.fontSize=".85rem";root.appendChild(note);
@@ -1423,6 +1426,32 @@ function setupMeasurementForm(){
  }
 }
 setupMeasurementForm();
+let measurementFormLoadedFor="";
+async function loadMeasurementDecisionForDate(no,date){
+ if(!unlocked||!activeKey||!no||!date)return;
+ const context=no+"|"+date;
+ if(measurementFormLoadedFor===context)return;
+ const key=activeKey;
+ const data=await readClientData(no,key);
+ if(!unlocked||activeKey!==key||selectedClientNo!==no||document.getElementById("measurement-date").value!==date)return;
+ const record=(Array.isArray(data.measurementDecisions)?data.measurementDecisions:[]).find(x=>x.date===date);
+ document.querySelectorAll('input[name="measurement-decision"]').forEach(x=>x.checked=x.value===record?.decision);
+ document.getElementById("measurement-reason").value=record?.reason||"";
+ document.getElementById("measurement-performed-fields").hidden=record?.decision!=="performed";
+ for(const check of document.querySelectorAll("[data-method]")){
+  const result=record?.methods?.find(x=>x.type===check.dataset.method);
+  check.checked=!!result;
+  const field=document.querySelector('[data-result="'+check.dataset.method+'"]');
+  const group=document.querySelector('[data-result-group="'+check.dataset.method+'"]');
+  field.value=result?.result||"";
+  field.hidden=!result;group.hidden=!result;
+ }
+ measurementFormLoadedFor=context;
+}
+document.getElementById("measurement-date").addEventListener("change",()=>{
+ measurementFormLoadedFor="";
+ loadMeasurementDecisionForDate(selectedClientNo,document.getElementById("measurement-date").value);
+});
 document.getElementById("measurement-results-open").onclick=()=>{const checked=document.querySelectorAll("[data-method]:checked");if(!checked.length){document.getElementById("measurement-status").textContent="先に実施した方法を選択してください。";return;}document.getElementById("measurement-results-screen").showModal();};
 document.getElementById("measurement-results-close").onclick=()=>document.getElementById("measurement-results-screen").close();
 document.getElementById("review-date").addEventListener("change",()=>loadMonthlyReviews(selectedClientNo));
@@ -1481,6 +1510,7 @@ document.getElementById("measurement-save").onclick=async()=>{
   await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
   if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
   await loadMeasurements(no);
+  measurementFormLoadedFor=no+"|"+date;
   status.textContent="実施判断・理由"+(decision==="performed"?"・結果":"")+"を暗号化して保存しました。";
  }catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
 };
@@ -1508,7 +1538,9 @@ async function loadMonthlyReviews(no){const key=activeKey,out=document.getElemen
  const related=decisionRecords.find(x=>x.date===reviewDay);
  document.getElementById("review-measurement-reference").textContent="【選択的評価・測定｜今回の判断】\n"+(related?(related.decision==="skipped"?"実施しない":"実施")+"｜理由："+related.reason+"\n"+(related.methods||[]).map(x=>(measurementTypes[x.type]||x.type)+"："+x.result).join("\n"):"未記録（履歴ボタンから過去の記録を確認できます）");
  const records=Array.isArray(data.monthlyReviews)?data.monthlyReviews:[];out.replaceChildren();if(!records.length){out.textContent="記録はありません。";return;}for(const r of [...records].reverse()){const p=document.createElement("p");p.style.cssText="padding:9px 0;border-bottom:1px solid #dce7e4;white-space:pre-wrap";p.textContent=r.date+"｜目標："+r.goal+"\n期間中の変化："+r.changes+"\n次回確認："+(r.followup||"記録なし");out.append(p);}}catch(e){if(unlocked&&selectedClientNo===no)out.textContent="読み込み失敗："+e.message;}}
-document.getElementById("review-save").onclick=async()=>{const no=selectedClientNo,key=activeKey,status=document.getElementById("review-status"),button=document.getElementById("review-save");if(!unlocked||!no||!key)return;const date=document.getElementById("review-date").value,goal=document.getElementById("review-goal").value.trim(),changes=document.getElementById("review-changes").value.trim(),followup=document.getElementById("review-followup").value.trim();if(!date||!goal||!changes){status.textContent="再評価日・生活目標の到達状況・期間中の変化を入力してください。";return;}feedback(button,true,"保存中…");try{const data=await readClientData(no,key);const visits=(Array.isArray(data.visits)?data.visits:[]).filter(v=>v.date===date&&v.kind==="monthly");if(visits.length!==1){status.textContent="定期再評価として登録された来院日を選んでください。";return;}const records=Array.isArray(data.monthlyReviews)?data.monthlyReviews:[];if(records.some(r=>r.date===date)){status.textContent="同日の定期再評価は登録済みです。重複保存は行いません。";return;}data.monthlyReviews=[...records,{date,goal,changes,followup,createdAt:new Date().toISOString()}];const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await loadMonthlyReviews(no);await loadVisitTimeline(no);status.textContent="定期再評価を暗号化して保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}};
+document.getElementById("review-save").onclick=async()=>{const no=selectedClientNo,key=activeKey,status=document.getElementById("review-status"),button=document.getElementById("review-save");if(!unlocked||!no||!key)return;const date=document.getElementById("review-date").value,goal=document.getElementById("review-goal").value.trim(),changes=document.getElementById("review-changes").value.trim(),followup=document.getElementById("review-followup").value.trim();if(!date||!goal||!changes){status.textContent="再評価日・生活目標の到達状況・期間中の変化を入力してください。";return;}feedback(button,true,"保存中…");try{const data=await readClientData(no,key);const visits=(Array.isArray(data.visits)?data.visits:[]).filter(v=>v.date===date&&v.kind==="monthly");if(visits.length!==1){status.textContent="定期再評価として登録された来院日を選んでください。";return;}const decision=(Array.isArray(data.measurementDecisions)?data.measurementDecisions:[]).find(x=>x.date===date);
+ if(!decision?.reason||!["performed","skipped"].includes(decision.decision)){status.textContent="選択的評価・測定の実施判断と理由を③で保存してください。";return;}
+ const records=Array.isArray(data.monthlyReviews)?data.monthlyReviews:[];if(records.some(r=>r.date===date)){status.textContent="同日の定期再評価は登録済みです。重複保存は行いません。";return;}data.monthlyReviews=[...records,{date,goal,changes,followup,createdAt:new Date().toISOString()}];const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await loadMonthlyReviews(no);await loadVisitTimeline(no);status.textContent="定期再評価を暗号化して保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}};
 document.getElementById("life-goal-save").onclick=async()=>{const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const goal=document.getElementById("life-goal").value.trim(),status=document.getElementById("life-goal-status"),button=document.getElementById("life-goal-save");feedback(button,true,"保存中…");try{const data=await readClientData(no,key);data.lifeGoal=goal;data.goalUpdatedAt=new Date().toISOString();const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await loadLifeGoal(no);status.textContent="生活目標を暗号化して保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}};
 function updateVisitSummaries(){let count=0;for(let i=1;i<=3;i++){const date=document.getElementById("intake-visit"+i+"Date").value.trim(),place=document.getElementById("intake-visit"+i+"Place").value.trim(),tests=document.getElementById("intake-visit"+i+"Tests").value.trim(),explanation=document.getElementById("intake-visit"+i+"Explanation").value.trim();if(date||place||tests||explanation)count++;document.getElementById("visit-summary-"+i).textContent="受診歴 "+i+"｜"+(date||place?(date||"時期未入力")+"｜"+(place||"医療機関未入力"):(tests||explanation?"詳細あり（時期・医療機関未入力）":"未入力"));}document.querySelector("#intake-visit-history > summary").textContent="受診歴の時系列（"+count+"件入力・最大3件）";}for(let i=1;i<=3;i++)for(const suffix of ["Date","Place","Tests","Explanation"])document.getElementById("intake-visit"+i+suffix).addEventListener("input",updateVisitSummaries);
 
