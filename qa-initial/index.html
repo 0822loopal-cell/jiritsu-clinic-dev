@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.73-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.74-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -295,7 +295,7 @@ function initialAttachMeasurement(){
  const details=document.createElement("details");
  details.style.cssText="margin:18px 0;padding:12px;border:1px solid #9ebcb3;border-radius:9px;background:#fff";
  const heading=document.createElement("summary");
- heading.textContent="必要時の機器測定・B-BRAIN・徒手／動作評価を開く";heading.style.cssText="cursor:pointer;font-weight:700";
+ heading.textContent="選択的評価・測定｜実施／非実施の判断と理由（必須）";details.open=true;heading.style.cssText="cursor:pointer;font-weight:700";
  details.appendChild(heading);details.appendChild(panel);assessment.appendChild(details);
  initialMeasurementWrapper=details;
  panel.hidden=false;
@@ -1471,13 +1471,13 @@ async function loadMeasurements(no){
   const legacy=Array.isArray(data.measurements)?data.measurements:[];
   const rows=[
    ...decisions.map(item=>({date:item.date,item,kind:"decision"})),
-   ...legacy.filter(x=>!decisions.some(d=>d.date===x.date&&d.decision==="performed"&&d.methods?.some(m=>m.type===x.type))).map(item=>({date:item.date,item,kind:"legacy"}))
+   ...legacy.map(item=>({date:item.date,item,kind:"legacy"}))
   ].sort((x,y)=>String(y.date||"").localeCompare(String(x.date||"")));
   out.replaceChildren();
   if(!rows.length){out.textContent="記録はありません。";return;}
   for(const {date,item,kind} of rows){
    const div=document.createElement("div");div.style.cssText="padding:10px 0;border-bottom:1px solid #dce7e4;white-space:pre-wrap";
-   const title=document.createElement("strong");title.textContent=(date||"日付未設定")+"｜"+(kind==="legacy"?"旧形式":item.decision==="skipped"?"実施しない":"実施")+"｜"+(item.mode==="online"?"オンライン":"対面");
+   const title=document.createElement("strong");title.textContent=(date||"日付未設定")+"｜"+(kind==="legacy"?"旧形式":item.decision==="skipped"?"実施しない":"実施")+"｜"+(item.visitKind==="initial"?"初回｜":item.visitKind==="monthly"?"定期再評価｜":item.visitKind==="ongoing"?"継続｜":"")+(item.mode==="online"?"オンライン":"対面");
    const body=document.createElement("p");
    if(kind==="legacy")body.textContent=(measurementTypes[item.type]||item.type||"方法不明")+"\n"+(item.result||"結果未登録");
    else if(item.decision==="skipped")body.textContent="非実施の理由：\n"+(item.reason||"未記録");
