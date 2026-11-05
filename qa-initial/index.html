@@ -1407,8 +1407,78 @@ const visitKinds={initial:"初回",ongoing:"継続",monthly:"定期再評価"},v
 async function loadVisits(no){const key=activeKey;if(!unlocked||!key||selectedClientNo!==no)return;const out=document.getElementById("visit-history");try{const data=await readClientData(no,key);if(!unlocked||activeKey!==key||selectedClientNo!==no)return;const list=Array.isArray(data.visits)?data.visits:[];out.replaceChildren();if(!list.length){out.textContent="来院記録はありません。";return;}for(const v of [...list].reverse()){const p=document.createElement("p");p.textContent=(v.date||"")+"｜"+(visitKinds[v.kind]||"区分不明")+"｜"+(visitModes[v.mode]||"形態不明");p.style.cssText="padding:8px 0;border-bottom:1px solid #dce7e4";out.appendChild(p);}}catch(e){if(unlocked&&selectedClientNo===no)out.textContent="読み込み失敗："+e.message;}}
 document.getElementById("visit-save").onclick=async()=>{const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const date=document.getElementById("visit-date").value,kind=document.getElementById("visit-kind").value,mode=document.getElementById("visit-mode").value,status=document.getElementById("visit-status"),button=document.getElementById("visit-save");if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!visitKinds[kind]||!visitModes[mode]){status.textContent="来院日・来院区分・提供形態をすべて選択してください。";return;}feedback(button,true,"保存中…");try{const data=await readClientData(no,key);const list=Array.isArray(data.visits)?data.visits:[];if(list.some(v=>v.date===date&&v.kind===kind&&v.mode===mode)){status.textContent="同じ来院日・区分・提供形態の記録が既にあります。新規保存は行いませんでした。";return;}data.visits=[...list,{date,kind,mode,createdAt:new Date().toISOString()}];const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await loadVisits(no);await loadSessions(no);await loadVisitTimeline(no);supportVisits=data.visits;renderSupportQuote();if(!document.getElementById("ongoing-workspace").hidden&&ongoingStep===1)ongoingVisitInfoRefresh?.();status.textContent="来院情報を暗号化して保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}};
 const measurementTypes={connect:"CONNECT AI（姿勢）",breath:"B-BREATH（自律神経）",brain:"B-BRAIN（ストレス）",manual:"徒手検査（筋骨格系）",movement:"身体の動き・姿勢・バランスの確認",other:"その他の状態確認"};
-async function loadMeasurements(no){const key=activeKey;if(!unlocked||!key||selectedClientNo!==no)return;const out=document.getElementById("measurement-history");try{const data=await readClientData(no,key);if(!unlocked||activeKey!==key||selectedClientNo!==no)return;const list=Array.isArray(data.measurements)?data.measurements:[];out.replaceChildren();if(!list.length){out.textContent="記録はありません。";return;}for(const item of [...list].reverse()){const p=document.createElement("p");p.style.cssText="white-space:pre-wrap;padding:9px 0;border-bottom:1px solid #dce7e4";p.textContent=item.date+"｜"+(measurementTypes[item.type]||"未登録")+"｜"+(item.mode==="online"?"オンライン":"対面")+"\n"+(item.result||"");out.appendChild(p);}}catch(e){if(unlocked&&selectedClientNo===no)out.textContent="読み込み失敗："+e.message;}}
-document.getElementById("measurement-save").onclick=async()=>{const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const date=document.getElementById("measurement-date").value,type=document.getElementById("measurement-type").value,result=document.getElementById("measurement-result").value.trim(),status=document.getElementById("measurement-status"),button=document.getElementById("measurement-save");if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!measurementTypes[type]||!result){status.textContent="実施日・確認方法・結果を入力してください。";return;}feedback(button,true,"保存中…");try{const data=await readClientData(no,key),visits=Array.isArray(data.visits)?data.visits:[],matches=visits.filter(v=>v.date===date);if(matches.length!==1){status.textContent="同日の来院管理記録が"+matches.length+"件です。先に来院日と提供形態を1件に確定してください。";return;}const mode=matches[0].mode;if(mode==="online"&&["connect","breath","brain","manual"].includes(type)){status.textContent="オンラインでは専用機器測定・徒手検査を記録できません。確認方法を変更してください。";return;}if(!["inperson","online"].includes(mode))throw Error("来院の提供形態が不正です。");const list=Array.isArray(data.measurements)?data.measurements:[];data.measurements=[...list,{date,type,mode,result,createdAt:new Date().toISOString()}];const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await loadMeasurements(no);await loadVisitTimeline(no);document.getElementById("measurement-result").value="";status.textContent="検査・測定結果を暗号化して保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}};
+
+function setupMeasurementForm(){
+ const root=document.getElementById("measurement-method-fields");root.replaceChildren();
+ for(const [type,label] of Object.entries(measurementTypes)){
+  const section=document.createElement("div");section.style.cssText="padding:10px;margin:8px 0;border:1px solid #dce7e4;border-radius:8px;background:#fff";
+  const lbl=document.createElement("label");lbl.style.cssText="display:block;font-weight:600";
+  const check=document.createElement("input");check.type="checkbox";check.dataset.method=type;
+  lbl.append(check,document.createTextNode(" "+label));
+  const field=document.createElement("textarea");field.className="search";field.rows=3;field.maxLength=2000;field.placeholder="今回の測定・確認内容と結果を自由記述";field.dataset.result=type;field.hidden=true;
+  check.addEventListener("change",()=>{field.hidden=!check.checked;if(!check.checked)field.value="";});
+  section.append(lbl,field);root.append(section);
+ }
+}
+setupMeasurementForm();
+document.querySelectorAll('input[name="measurement-decision"]').forEach(x=>x.addEventListener("change",()=>{
+ document.getElementById("measurement-performed-fields").hidden=document.querySelector('input[name="measurement-decision"]:checked')?.value!=="performed";
+}));
+document.querySelectorAll("[data-open-measurement-history]").forEach(button=>button.onclick=async()=>{
+ await loadMeasurements(selectedClientNo);document.getElementById("measurement-history-screen").showModal();
+});
+document.getElementById("measurement-history-close").onclick=()=>document.getElementById("measurement-history-screen").close();
+async function loadMeasurements(no){
+ const key=activeKey;if(!unlocked||!key||selectedClientNo!==no)return;
+ const out=document.getElementById("measurement-history");
+ try{
+  const data=await readClientData(no,key);if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
+  const decisions=Array.isArray(data.measurementDecisions)?data.measurementDecisions:[];
+  const legacy=Array.isArray(data.measurements)?data.measurements:[];
+  const rows=[
+   ...decisions.map(item=>({date:item.date,item,kind:"decision"})),
+   ...legacy.filter(x=>!decisions.some(d=>d.date===x.date&&d.decision==="performed"&&d.methods?.some(m=>m.type===x.type))).map(item=>({date:item.date,item,kind:"legacy"}))
+  ].sort((x,y)=>String(y.date||"").localeCompare(String(x.date||"")));
+  out.replaceChildren();
+  if(!rows.length){out.textContent="記録はありません。";return;}
+  for(const {date,item,kind} of rows){
+   const div=document.createElement("div");div.style.cssText="padding:10px 0;border-bottom:1px solid #dce7e4;white-space:pre-wrap";
+   const title=document.createElement("strong");title.textContent=(date||"日付未設定")+"｜"+(kind==="legacy"?"旧形式":item.decision==="skipped"?"実施しない":"実施")+"｜"+(item.mode==="online"?"オンライン":"対面");
+   const body=document.createElement("p");
+   if(kind==="legacy")body.textContent=(measurementTypes[item.type]||item.type||"方法不明")+"\n"+(item.result||"結果未登録");
+   else if(item.decision==="skipped")body.textContent="非実施の理由：\n"+(item.reason||"未記録");
+   else body.textContent="実施目的・判断理由：\n"+(item.reason||"未記録")+"\n\n"+(item.methods||[]).map(m=>(measurementTypes[m.type]||m.type)+"\n"+(m.result||"結果未登録")).join("\n\n");
+   div.append(title,body);out.append(div);
+  }
+ }catch(e){if(unlocked&&selectedClientNo===no)out.textContent="読み込み失敗："+e.message;}
+}
+document.getElementById("measurement-save").onclick=async()=>{
+ const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;
+ const date=document.getElementById("measurement-date").value;
+ const decision=document.querySelector('input[name="measurement-decision"]:checked')?.value||"";
+ const reason=document.getElementById("measurement-reason").value.trim();
+ const status=document.getElementById("measurement-status"),button=document.getElementById("measurement-save");
+ const methods=[...document.querySelectorAll("[data-method]:checked")].map(c=>({type:c.dataset.method,result:document.querySelector('[data-result="'+c.dataset.method+'"]').value.trim()}));
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!["performed","skipped"].includes(decision)||!reason){status.textContent="来院日・実施判断・判断理由を入力してください。";return;}
+ if(decision==="performed"&&(!methods.length||methods.some(x=>!x.result))){status.textContent="実施した方法を選び、それぞれの結果を自由記述してください。";return;}
+ feedback(button,true,"保存中…");
+ try{
+  const data=await readClientData(no,key);
+  const matching=(Array.isArray(data.visits)?data.visits:[]).filter(v=>v.date===date);
+  if(matching.length!==1){status.textContent="同日の来院登録が1件必要です。現在："+matching.length+"件。";return;}
+  const visit=matching[0],mode=visit.mode;
+  if(!["inperson","online"].includes(mode))throw Error("提供形態が不正です。");
+  if(decision==="performed"&&mode==="online"&&methods.some(m=>["connect","breath","brain","manual"].includes(m.type))){status.textContent="オンラインでは専用機器測定・徒手検査を記録できません。";return;}
+  const old=Array.isArray(data.measurementDecisions)?data.measurementDecisions:[];
+  data.measurementDecisions=[...old.filter(x=>x.date!==date),{date,visitKind:visit.kind,mode,decision,reason,methods:decision==="performed"?methods:[],savedAt:new Date().toISOString()}];
+  const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));
+  if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
+  await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
+  if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
+  await loadMeasurements(no);
+  status.textContent="実施判断・理由"+(decision==="performed"?"・結果":"")+"を暗号化して保存しました。";
+ }catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
+};
 const supportFees={zpt:2200,body:3300,care:2200,video:2200},supportLabels={zpt:"かとう式鎮痛療法",body:"整体・緊張緩和",care:"セルフケア指導",video:"個別セルフケア動画（1本）"},supportConsents={pending:"説明済み・検討中",accepted:"本人が承諾",declined:"本人が辞退"};let supportVisits=[],editingSupportIndex=null,supportPlanCache=[];
 function supportSelection(){const date=document.getElementById("support-date").value,matching=supportVisits.filter(v=>v.date===date);return matching.length===1?matching[0]:null;}
 function renderSupportQuote(){const date=document.getElementById("support-date").value,visit=supportSelection(),info=document.getElementById("support-visit-info"),price=document.getElementById("support-price");const chosen=[...document.querySelectorAll("#support-menu input:checked")].map(x=>x.value);for(const input of document.querySelectorAll("#support-menu input")){input.disabled=!visit||visit.mode==="online"&&["zpt","body"].includes(input.value);if(input.disabled)input.checked=false;}const selected=[...document.querySelectorAll("#support-menu input:checked")].map(x=>x.value);if(editingSupportIndex===null&&date&&supportPlanCache.some(x=>x.date===date)){info.textContent="この来院日の支援方針は登録済みです。重複登録せず、下の保存済み支援方針履歴にある「"+date+" の記録を訂正」から変更してください。";price.textContent="料金：既存記録を確認してください。";return;}if(!visit){info.textContent=date?"この日付の来院記録が1件必要です。先に来院管理で登録してください。":"対象来院日を選択してください。";price.textContent="料金：来院情報を確認してください。";return;}const base=visit.kind==="initial"||visit.kind==="monthly"?4400:4400;const extras=visit.kind==="ongoing"?selected.reduce((v,k)=>v+supportFees[k],0):0;info.textContent="来院区分："+visitKinds[visit.kind]+"｜提供形態："+visitModes[visit.mode]+(visit.kind==="initial"?"｜初回4,400円にはセルフケア指導を含む（提案メニューは追加課金なし）":visit.kind==="monthly"?"｜月次検査・測定（基本料金加算なし）":"");price.textContent="税込料金："+(base+extras).toLocaleString("ja-JP")+"円（"+(visit.kind==="initial"?"初回セッション・セルフケア指導込み":visit.kind==="monthly"?"月次検査・測定":"継続基本料金")+" 4,400円"+(extras?" ＋ 追加サービス "+extras.toLocaleString("ja-JP")+"円":"")+"）";}
