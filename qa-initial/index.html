@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.78-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.79-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -479,7 +479,9 @@ async function ongoingShowPreparation(root){
    "生活目標の到達状況："+(review.goal||"未記録")+"\n期間中の変化："+(review.changes||"未記録")+"\n選択的評価・測定："+measurement+"\n次回確認事項："+(review.followup||"未記録"),true);
  }
  showSection("医療対応・症状カテゴリー評価｜直近",categoryLatestSummary(data),true);
- showSection("前回の施術記録・過去の申し送り",document.getElementById("session-previous").textContent+"\n\n"+document.getElementById("session-handoff").textContent,true);
+ const previous=(Array.isArray(data.sessions)?data.sessions:[]).filter(x=>x?.status==="complete"&&x.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+ const previousText=previous?["継続来院日："+previous.date,"来院時の状態："+(previous.values?.visitState||"記録なし"),"施術後の再評価："+(previous.values?.reevaluation||"記録なし"),"次回確認事項："+(previous.values?.next||"記録なし")].join("\n"):"完了済みの継続来院記録はありません。";
+ showSection("直近の完了済み継続来院・申し送り",previousText,true);
  showSection("4領域評価｜各領域の直近記録",ongoingLatestAssessmentSummary(data),false);
  showSection("セルフケア｜現在の設定・再検討対象",nextVisitCarePlanLink(data),false);
  }catch(e){if(ongoingStep===0&&selectedClientNo===no)contents.textContent="読み込み失敗："+e.message;}
