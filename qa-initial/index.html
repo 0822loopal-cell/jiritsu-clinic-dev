@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.74-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.75-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -617,9 +617,21 @@ function renderMonthlyWorkspace(){
   monthlyMovePanel("monthly-review-panel",root);
   const registered=document.createElement("p");registered.textContent="定期再評価として登録した日付を指定し、既存の保存ボタンで記録します。";registered.style.cssText="padding:10px;background:#fff;border-radius:8px";
   root.insertBefore(registered,document.getElementById("monthly-review-panel"));
-  const targetDate=document.getElementById("visit-date").value;
-  if(targetDate&&!document.getElementById("review-date").value)document.getElementById("review-date").value=targetDate;
-  loadMonthlyReviews(selectedClientNo);
+  const reviewDateInput=document.getElementById("review-date");
+  const reviewRef=document.getElementById("review-measurement-reference");
+  reviewRef.textContent="【選択的評価・測定｜今回の判断】\n来院登録と測定履歴を照合中…";
+  const reviewNo=selectedClientNo,reviewKey=activeKey;
+  (async()=>{
+   try{
+    const data=await readClientData(reviewNo,reviewKey);
+    if(!unlocked||activeKey!==reviewKey||selectedClientNo!==reviewNo||monthlyStep!==3)return;
+    const registered=(Array.isArray(data.visits)?data.visits:[]).filter(v=>v.kind==="monthly").sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+    if(registered.length&&!registered.some(v=>v.date===reviewDateInput.value)){
+     reviewDateInput.value=registered[0].date;
+    }
+    await loadMonthlyReviews(reviewNo);
+   }catch(e){if(unlocked&&selectedClientNo===reviewNo&&monthlyStep===3)reviewRef.textContent="測定履歴の読み込みに失敗しました："+e.message;}
+  })();
  const choice=document.createElement("details");choice.style.cssText="margin:12px 0;padding:12px;border:1px solid #b7cfc5;border-radius:9px;background:#fff";const choiceTitle=document.createElement("summary");choiceTitle.textContent="必要時の支援方針・料金・承諾の確認・記録";choiceTitle.style.cssText="cursor:pointer;font-weight:700";choice.appendChild(choiceTitle);root.appendChild(choice);
  monthlyMovePanel("support-plan-panel",choice);
  }
