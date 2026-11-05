@@ -30,7 +30,7 @@ small{color:#718381}footer{max-width:1080px;margin:24px auto;padding:0 20px 35px
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.77-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
+<header><h1>自律調整院｜初回業務・検証専用</h1><p>Ver.0.11.78-dev｜本番の保存領域とは分離した試験版</p></header><p style="max-width:1080px;margin:12px auto;padding:12px 20px;border:2px solid #be7c35;border-radius:10px;background:#fff5e5;color:#654018">【検証専用】このページの保存先は公開版と別です。架空クライアント情報だけで操作してください。初回完了処理・暗号化復元の実操作検証は未了です。</p>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -469,6 +469,14 @@ async function ongoingShowPreparation(root){
   const initialDate=initial.date||"日付未設定";
   const initialHandoff=typeof initial.handoff==="string"&&initial.handoff.trim()?initial.handoff.trim():"申し送りなし";
   showSection("初回完了からの申し送り｜"+initialDate,"初回完了："+new Date(initial.completedAt).toLocaleString("ja-JP")+"\n次回への申し送り："+initialHandoff,true);
+ }
+ const reviews=(Array.isArray(data.monthlyReviews)?data.monthlyReviews:[]).filter(x=>x?.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ if(reviews.length){
+  const review=reviews[0];
+  const decision=(Array.isArray(data.measurementDecisions)?data.measurementDecisions:[]).find(x=>x.date===review.date);
+  const measurement=decision?(decision.decision==="skipped"?"選択的測定は実施せず":"選択的測定を実施（"+(decision.methods||[]).map(x=>measurementTypes[x.type]||x.type).join("・")+"）"):"実施判断の記録なし";
+  showSection("直近の定期再評価からの申し送り｜"+review.date,
+   "生活目標の到達状況："+(review.goal||"未記録")+"\n期間中の変化："+(review.changes||"未記録")+"\n選択的評価・測定："+measurement+"\n次回確認事項："+(review.followup||"未記録"),true);
  }
  showSection("医療対応・症状カテゴリー評価｜直近",categoryLatestSummary(data),true);
  showSection("前回の施術記録・過去の申し送り",document.getElementById("session-previous").textContent+"\n\n"+document.getElementById("session-handoff").textContent,true);
