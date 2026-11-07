@@ -938,7 +938,7 @@ function renderOngoingWorkspace(){
  };
  visitRegister.insertBefore(visitInfo,visitRegister.children[1]);
  ongoingVisitInfoRefresh=()=>{syncVisitInfo();visitRegister.open=true;};
- visitDate.addEventListener("change",()=>{sessionDate.value=visitDate.value;renderSessionVisitLink();renderPreviousSession();renderSessionHandoff();syncVisitInfo();});
+ visitDate.onchange=()=>{sessionDate.value=visitDate.value;renderSessionVisitLink();renderPreviousSession();renderSessionHandoff();syncVisitInfo();};
  syncVisitInfo();
  const newSessionButton=document.createElement("button");newSessionButton.type="button";newSessionButton.className="test-action";newSessionButton.textContent="新規記録に切り替える";newSessionButton.disabled=editingSessionIndex===null;newSessionButton.addEventListener("click",()=>{if(!confirmSessionSwitch())return;resetSessionForm();document.getElementById("session-status").textContent="新規記録の入力に切り替えました。";renderOngoingWorkspace();});root.appendChild(newSessionButton);
  const mode=document.createElement("p");mode.textContent=document.getElementById("session-mode").textContent;mode.style.fontWeight="bold";root.appendChild(mode);
