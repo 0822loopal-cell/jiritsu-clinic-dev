@@ -713,7 +713,8 @@ async function ongoingShowPreparation(root){
  if(initial?.completedAt){
   const initialDate=initial.date||"日付未設定";
   const initialHandoff=typeof initial.handoff==="string"&&initial.handoff.trim()?initial.handoff.trim():"申し送りなし";
-  showSection("初回完了からの申し送り｜"+initialDate,"初回完了："+new Date(initial.completedAt).toLocaleString("ja-JP")+"\n次回への申し送り："+initialHandoff,true);
+  const care=initialCareSummary(data);
+  showSection("初回完了からの申し送り｜"+initialDate,"初回完了："+new Date(initial.completedAt).toLocaleString("ja-JP")+"\n初回完了時の申し送り："+initialHandoff+"\n初回セルフケア指導："+care.status+(care.followup?"\nセルフケア指導からの次回確認事項："+care.followup:""),true);
  }
  const reviews=(Array.isArray(data.monthlyReviews)?data.monthlyReviews:[]).filter(x=>x?.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  if(reviews.length){
