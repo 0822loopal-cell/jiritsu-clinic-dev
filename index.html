@@ -681,6 +681,7 @@ function ongoingRestoreFields(){
  // Remove only the dynamically generated self-care action wrapper.
  // The original forms and history panels have already been restored above.
  document.querySelectorAll("#selfcare-trial-panel .ongoing-selfcare-actions").forEach(node=>node.remove());
+ document.querySelectorAll("#selfcare-trial-panel .ongoing-selfcare-weekly-note").forEach(node=>node.remove());
 }
 function ongoingMoveField(id,to){
  const control=document.getElementById(id);if(!control)return;
@@ -998,6 +999,7 @@ function renderOngoingWorkspace(){
  const suggestions=document.getElementById("selfcare-suggestions");
  adopted.after(suggestions);
  const weeklyNote=document.createElement("p");
+ weeklyNote.className="ongoing-selfcare-weekly-note";
  weeklyNote.textContent="週間経過・現在の採用メニューは①準備で確認。候補抽出は保存済みのQ1〜Q6と直近の4領域評価を使います。週間のセルフケア実施回数は個別メニューの実施履歴ではありません。";
  weeklyNote.style.fontSize=".85rem";
  suggestions.insertAdjacentElement("beforebegin",weeklyNote);
@@ -1008,7 +1010,7 @@ function renderOngoingWorkspace(){
  actionsTitle.textContent="セルフケアの変更・履歴を開く（必要な場合）";
  actionsTitle.style.cssText="cursor:pointer;font-weight:bold";
  actions.appendChild(actionsTitle);
- adopted.after(actions);
+ suggestions.after(actions);
  for(const node of [...carePanel.querySelectorAll(".sc-workflow-disclosure")]){
   const marker=document.createComment("ongoing-selfcare-action");
   node.parentNode.insertBefore(marker,node);
