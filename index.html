@@ -76,7 +76,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.19｜工程②の整合性検証</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.20｜保存済み件数の即時更新</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2089,7 +2089,7 @@ async function loadCategoryAssessments(no){
  document.getElementById("category-status").textContent=list.length+"件の評価履歴を読み込みました。";
  }catch(e){if(unlocked&&selectedClientNo===no)history.textContent="読み込み失敗："+e.message;}
 }
-document.getElementById("category-refresh").onclick=()=>{if(selectedClientNo)loadCategoryAssessments(selectedClientNo);};document.getElementById("intake-to-category").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("category-panel"):showInitialStage(2);document.getElementById("category-to-assessment").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("assessment-panel"):showInitialStage(3);
+document.getElementById("category-refresh").onclick=async()=>{if(selectedClientNo){await loadCategoryAssessments(selectedClientNo);if(v2Mode&&v2Step===1){const d=await readClientData(selectedClientNo,activeKey);v2ShowStep2Saved(d,v2VisitDate);}}};document.getElementById("intake-to-category").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("category-panel"):showInitialStage(2);document.getElementById("category-to-assessment").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("assessment-panel"):showInitialStage(3);
 document.getElementById("category-save").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const status=document.getElementById("category-status"),button=document.getElementById("category-save"),date=document.getElementById("category-date").value,values={};for(const field of categoryFields)values[field]=document.getElementById("category-"+field).value.trim();
  if(!date||values.visitStatus===""||values.safety===""||values.alignment===""||!values.reason){status.textContent="評価日・受診状況・医療優先度・医療情報との整合性・判断理由を入力してください。";return;}
@@ -2101,7 +2101,7 @@ document.getElementById("category-save").onclick=async()=>{
  if(flags.hearing==="yes"&&values.safety==="0"){status.textContent="突然の聴力低下が疑われます。通常評価は選べません。";return;}
  if(Object.values(flags).some(v=>!v)&&values.safety==="0"){status.textContent="未確認の医療対応項目があります。通常評価は選べません。";return;}
  feedback(button,true,"保存中…");
- try{const data=await readClientData(no,key);if((data.intakeUpdatedAt||null)!==categoryRuleCache.inputUpdatedAt){status.textContent="ヒアリングが照合後に更新されています。再照合してください。";return;}if(!Array.isArray(data.symptomCategoryAssessments))data.symptomCategoryAssessments=[];data.symptomCategoryAssessments.push({date,values,flags,ruleAudit:{text:categoryRuleCache.text,priority:categoryRuleCache.priority,checkedAt:categoryRuleCache.checkedAt,inputUpdatedAt:categoryRuleCache.inputUpdatedAt},intakeSnapshot:categorySnapshot(data),savedAt:new Date().toISOString()});const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;clearCategoryAssessment();await loadCategoryAssessments(no);status.textContent="症状カテゴリー評価を履歴に追加保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
+ try{const data=await readClientData(no,key);if((data.intakeUpdatedAt||null)!==categoryRuleCache.inputUpdatedAt){status.textContent="ヒアリングが照合後に更新されています。再照合してください。";return;}if(!Array.isArray(data.symptomCategoryAssessments))data.symptomCategoryAssessments=[];data.symptomCategoryAssessments.push({date,values,flags,ruleAudit:{text:categoryRuleCache.text,priority:categoryRuleCache.priority,checkedAt:categoryRuleCache.checkedAt,inputUpdatedAt:categoryRuleCache.inputUpdatedAt},intakeSnapshot:categorySnapshot(data),savedAt:new Date().toISOString()});const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(data)));if(!unlocked||activeKey!==key||selectedClientNo!==no)return;await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});if(!unlocked||activeKey!==key||selectedClientNo!==no)return;clearCategoryAssessment();await loadCategoryAssessments(no);if(v2Mode&&v2Step===1&&v2VisitDate===date)v2ShowStep2Saved(data,date);status.textContent="症状カテゴリー評価を履歴に追加保存しました。";}catch(e){if(unlocked&&selectedClientNo===no)status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
 };
 
 
