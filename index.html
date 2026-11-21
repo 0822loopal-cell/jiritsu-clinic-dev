@@ -76,7 +76,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.20｜保存済み件数の即時更新</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.21｜工程②最終修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2148,17 +2148,17 @@ function categoryRuleCheck(data,values,flags){
  else if(/(?:一側|片側|右|左).*前庭.*(?:低下|障害|不全)|unilateral vestibular hypofunction|\bUVH\b/i.test(name)){points.push("既存医療情報：一側前庭機能低下。現在の動作時症状と生活機能を確認する。");questions.push("発症時のめまいと現在の不安定感の違いはあるか。","頭部運動時に視界がぶれるか。","暗所・不整地で不安定感が増すか（聞き取りで確認）。","安静時と動作時の症状の違いはあるか。","発症後の生活機能はどう変化したか。");}
  else if(/PPPD|持続性知覚性姿勢誘発/i.test(name)){points.push("既存診断：PPPD");questions.push("持続期間、立位・動作・複雑な視覚環境との関係を確認する。");}
  else issues.push("既存診断名「"+name+"」の個別照合ルールは未登録");
- if(values.change==="1"||values.change==="2")questions.push("発症時と現在の症状を分けて確認する。");
+ if((values.change==="1"||values.change==="2")&&!questions.some(q=>q.includes("発症時のめまいと現在の不安定感")))questions.push("発症時と現在の症状を分けて確認する。");
  if(values.visitStatus==="1"&&!name)issues.push("受診済み・診断名ありと回答されているが、診断名が未記録");
  const priority=positives.some(k=>k==="neuro"||k==="acute"||k==="cardiac")?"緊急医療への対応を優先する徴候あり":positives.length?"速やかな医療機関の評価を優先する徴候あり":unknown.length?"未確認が残るため判断保留":"指定徴候なし（安全の自動判定ではない）";
  const consistencyHint=!name?"医療情報との照合：診断名が未登録のため判定保留":issues.some(x=>x.includes("現在の持続性・長時間"))?"医療情報との照合：現在の経過について追加確認を推奨":points.length?"医療情報との照合：確認すべき特徴を抽出（整合性の確定は不可）":"医療情報との照合：対象となる個別ルールなし";
  const reason=[...risks,consistencyHint,...points,...issues.map(x=>"追加確認："+x)].join("\n");
  const text="【医療対応】\n"+priority+"\n"+risks.map(x=>"・"+x).join("\n")+"\n\n【医療情報との照合候補】\n"+consistencyHint+"\n\n【診断名との照合】\n"+(points.length?points.map(x=>"・"+x).join("\n"):"・一致点の判定情報なし")+"\n"+issues.map(x=>"・"+x).join("\n")+"\n\n【追加質問】\n"+(questions.length?questions.map(x=>"・"+x).join("\n"):"・施術者が経過と病態を確認")+"\n\n※照合結果は診断・除外診断ではありません。";
- return {priority,consistencyHint,reason,text,flags:{...flags},values:{...values},inputUpdatedAt:data.intakeUpdatedAt||null,checkedAt:new Date().toISOString()};
+ const summary="【医療対応】\n"+priority+"\n\n【診断名との照合】\n"+(points.filter(p=>p.startsWith("既存医療情報：")||p.startsWith("既存診断：")).join("\n")||consistencyHint)+"\n\n【追加確認・質問】\n"+([...new Set(questions)].length?[...new Set(questions)].map(q=>"・"+q).join("\n"):"・施術者が経過と病態を確認")+(issues.length?"\n\n【追加で確認する項目】\n"+issues.map(x=>"・"+x).join("\n"):"")+"\n\n※受診歴・発症経過の詳細は下の折りたたみから確認できます。";return {priority,consistencyHint,reason,text,summary,flags:{...flags},values:{...values},inputUpdatedAt:data.intakeUpdatedAt||null,checkedAt:new Date().toISOString()};
 }
 document.getElementById("category-analyze").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!no||!key||!unlocked)return;const el=document.getElementById("category-rule-result");el.textContent="照合中…";
- try{const data=await readClientData(no,key);if(!unlocked||key!==activeKey||no!==selectedClientNo)return;const flags=categoryFlags();const associated=document.getElementById("category-associated");if(associated.value===categoryAutoFlagsText)associated.value="";categoryAutoFlagsText="";categoryRuleCache=categoryRuleCheck(data,categoryInputs(),flags);el.textContent=categoryRuleCache.text;document.getElementById("category-copy-reason").disabled=false;}
+ try{const data=await readClientData(no,key);if(!unlocked||key!==activeKey||no!==selectedClientNo)return;const flags=categoryFlags();const associated=document.getElementById("category-associated");if(associated.value===categoryAutoFlagsText)associated.value="";categoryAutoFlagsText="";categoryRuleCache=categoryRuleCheck(data,categoryInputs(),flags);el.replaceChildren();const top=document.createElement("div");top.textContent=categoryRuleCache.summary;const detail=document.createElement("details"),heading=document.createElement("summary"),body=document.createElement("div");heading.textContent="受診歴・発症経過を含む照合の詳細";body.textContent=categoryRuleCache.text;body.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 0";detail.append(heading,body);el.append(top,detail);document.getElementById("category-copy-reason").disabled=false;}
  catch(e){clearCategoryRule();el.textContent="照合失敗："+e.message;}
 };
 document.getElementById("category-copy-reason").onclick=()=>{if(!categoryRuleCache)return;const hint="【照合結果の参照要点】\n"+categoryRuleCache.priority+"\n"+categoryRuleCache.consistencyHint+"\n【施術者が確認した判断根拠】\n";const el=document.getElementById("category-reason");if(!el.value.trim())el.value=hint.slice(0,1200);else if(!el.value.includes("【照合結果の参照要点】"))el.value=el.value+"\n備考："+hint;};
@@ -2411,7 +2411,7 @@ async function v2Go(i){
  if(i>oldStep+1){document.getElementById("v2-visit-caption").textContent="次の工程から順番に進んでください。";return;}
  if(i>1&&oldStep===1){const data=await readClientData(no,key);if(!unlocked||selectedClientNo!==no||activeKey!==key||v2Mode!==mode||v2Step!==oldStep)return;if(!(data.assessments||[]).some(a=>a.date===v2VisitDate&&a.values?.v2Kind==="standard")){document.getElementById("assessment-status").textContent="標準評価を保存してから進んでください。未実施項目は明示してください。";document.getElementById("assessment-panel").scrollIntoView({block:"start"});return;}const c=(data.symptomCategoryAssessments||[]).filter(a=>a.date===v2VisitDate).at(-1);if(!c||c.values?.safety!=="0"||!c.flags||Object.values(c.flags).some(x=>x!=="no")||Object.keys(categoryFlagNames).some(k=>c.flags[k]!=="no")){document.getElementById("category-status").textContent="通常評価・介入に進む前に、今回の医療対応判断を確認してください。医療対応優先・判断保留の場合は通常介入に進めません。";document.getElementById("category-status").scrollIntoView({block:"center"});return;}}
  if(oldStep===2&&i!==oldStep&&sessionHasUnsavedChanges()){document.getElementById("session-status").textContent="施術記録を保存してから次へ進んでください。";document.getElementById("session-panel").scrollIntoView({block:"start"});return;}v2Step=i;v2Render();
- if(i===1||i===2){const kind=document.getElementById("assessment-v2Kind");if(editingAssessmentIndex===null&&!assessmentFields.some(f=>!["v2Kind","v2Baseline"].includes(f)&&document.getElementById("assessment-"+f).value)){document.getElementById("assessment-date").value=v2VisitDate;kind.value=i===1?"standard":"post";if(i===1&&!document.getElementById("assessment-lifeActivity").value)document.getElementById("assessment-lifeActivity").value=document.getElementById("life-goal").value;v2RefreshBaseline();if(i===2){const sel=document.getElementById("assessment-v2Baseline");if(sel.options.length===2)sel.selectedIndex=1;}}}
+ if(i===1||i===2){const kind=document.getElementById("assessment-v2Kind");if(i===2&&oldStep===1&&editingAssessmentIndex===null){clearAssessment();document.getElementById("assessment-date").value=v2VisitDate;kind.value="post";await loadAssessments(no);v2RefreshBaseline();const sel=document.getElementById("assessment-v2Baseline");if(sel.options.length===2)sel.selectedIndex=1;document.getElementById("assessment-status").textContent="工程③：介入後評価（必要項目のみ）。工程②の標準評価は保存済みです。";}else if(editingAssessmentIndex===null&&!assessmentFields.some(f=>!["v2Kind","v2Baseline"].includes(f)&&document.getElementById("assessment-"+f).value)){document.getElementById("assessment-date").value=v2VisitDate;kind.value=i===1?"standard":"post";if(i===1&&!document.getElementById("assessment-lifeActivity").value)document.getElementById("assessment-lifeActivity").value=document.getElementById("life-goal").value;v2RefreshBaseline();if(i===2){const sel=document.getElementById("assessment-v2Baseline");if(sel.options.length===2)sel.selectedIndex=1;}}}
  await v2PrepareVisitFields(no,key,mode,i);
  }catch(e){document.getElementById("v2-visit-caption").textContent="確認失敗："+e.message;}
 }
@@ -2562,6 +2562,7 @@ async function v2PrepareVisitFields(no,key,mode,step){
  if(el.value!==date){el.value=date;el.dispatchEvent(new Event("change"));}
  }
  if(step===1){document.getElementById("category-intake-summary").textContent=categorySummary(categorySnapshot(data));v2ShowStep2Saved(data,date);const tinnitus=document.getElementById("assessment-lifeTinnitusImpact");if(editingAssessmentIndex===null&&!tinnitus.value&&data.intake?.symptomsConfirmed===true&&Array.isArray(data.intake.detailGroups)&&!data.intake.detailGroups.includes("tinnitus"))tinnitus.value="非該当";const activity=document.getElementById("assessment-lifeActivity");if(editingAssessmentIndex===null&&document.getElementById("assessment-v2Kind").value==="standard"&&!activity.value)activity.value=data.lifeGoal||"";}
+ if(step===2&&editingAssessmentIndex===null){const kind=document.getElementById("assessment-v2Kind");if(kind.value!=="post"){kind.value="post";v2RefreshBaseline();}document.getElementById("assessment-status").textContent="工程③：介入後評価（必要時のみ）。保存済みの介入前標準評価は変更しません。";}
  if(step===2&&editingSessionIndex===null&&!sessionHasUnsavedChanges()){
  const idx=sessionCache.findIndex(x=>x.date===date&&x.status!=="complete");
  if(idx>=0)editSession(idx);
