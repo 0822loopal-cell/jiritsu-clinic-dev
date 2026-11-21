@@ -2319,7 +2319,7 @@ function v2InitSessionSections(){
 function v2SelectSub(i){
  const items=v2SubItems[v2Step];if(!items||i<0||i>=items.length)return;
  v2SubIndex=i;
- for(const [j,item] of items.entries()){const el=document.getElementById(item.panel);if(el)el.hidden=j!==i;}
+ for(const panelId of new Set(items.map(item=>item.panel))){const el=document.getElementById(panelId);if(el)el.hidden=items[i].panel!==panelId;}
  if(v2Step===2){const session=document.getElementById("session-panel");for(const child of session.children){const type=child.dataset.v2SessionPart;child.hidden=type==="oldnav"||(["header","state","intervention","handoff"].includes(type)&&type!==(["support","state","intervention","post","handoff"][i]));}if(i===1){for(const id of ["session-previous","session-handoff"])document.getElementById(id)?.closest("details")?.removeAttribute("open");}}
  const tabs=document.getElementById("v2-subtabs");for(const [j,b] of Array.from(tabs.children).entries()){b.setAttribute("aria-current",j===i?"step":"false");b.disabled=false;}
  document.getElementById("v2-subcaption").textContent=(i+1)+" / "+items.length+"｜"+items[i].label;
