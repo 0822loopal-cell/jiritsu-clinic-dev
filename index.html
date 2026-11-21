@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.25｜初回・継続の聞き取り表示分離</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.26｜工程内切り替え位置修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2338,7 +2338,8 @@ function v2SelectSub(i){
  document.getElementById("v2-sub-prev").disabled=i===0;
  document.getElementById("v2-sub-next").textContent=i===items.length-1?"次の工程へ":"次の項目";
  document.getElementById("v2-substatus").textContent=v2SubStatusCache[v2Step]||"各項目の保存状況を確認してください。";
- const subnav=document.getElementById("v2-subnav");requestAnimationFrame(()=>{const top=subnav.getBoundingClientRect().top+window.scrollY-12;window.scrollTo({top:Math.max(0,top),behavior:"instant"});});
+ const stage=document.getElementById("v2-stage");const selectedStep=v2Step,selectedIndex=i;
+ requestAnimationFrame(()=>{if(v2Step!==selectedStep||v2SubIndex!==selectedIndex)return;const top=stage.getBoundingClientRect().top+window.scrollY-8;window.scrollTo({top:Math.max(0,top),behavior:"instant"});});
 }
 function v2RefreshSubStatus(data){
  if(!v2SubItems[v2Step]||!v2VisitDate)return;
