@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.31｜任意項目表示と旧形式共有データ案内の整合修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.32｜5工程の完了条件・週間導線を統合</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2495,6 +2495,7 @@ function v2Audit(data,date,mode){
  const visits=day("visits"),standard=day("assessments").filter(a=>a.values?.v2Kind==="standard"),post=day("assessments").filter(a=>a.values?.v2Kind==="post");
  const category=day("symptomCategoryAssessments"),measurement=day("measurementDecisions"),sessions=day("sessions"),plans=day("supportPlans"),trials=day("selfcareTrials"),reviews=day("monthlyReviews");
  const checks=[["来院登録",visits.length===1&&visits[0].kind===mode],["標準評価",standard.length===1&&v2ValidateStandard(standard[0].values).length===0],["医療対応・症状カテゴリー確認",category.at(-1)?.values?.safety==="0"&&!!category.at(-1)?.values?.alignment&&!!category.at(-1)?.values?.reason&&!!category.at(-1)?.flags&&Object.values(category.at(-1).flags).every(x=>x==="no")&&Object.keys(categoryFlagNames).every(k=>category.at(-1).flags[k]==="no")]];
+ if(mode==="monthly"){checks.push(["定期再評価の記録",reviews.length===1&&!!reviews[0].goal?.trim()&&!!reviews[0].changes?.trim()]);checks.push(["選択的測定の実施・見送り判断",measurement.some(x=>!!x.reason&&["performed","skipped"].includes(x.decision))]);}
  if(mode==="initial"){checks.push(["氏名・初回ヒアリング",!!data.profile?.name&&data.intake?.symptomsConfirmed===true],["生活目標",!!data.lifeGoal?.trim()],["初回支援方針・料金・承諾",plans.some(p=>p.consent==="accepted"&&Number(p.total)===4400&&p.details?.trim())]);}
  return {checks,standard,post,category,measurement,sessions,plans,trials,reviews,visits};
 }
@@ -2503,7 +2504,7 @@ async function v2LoadFinal(){
  const out=document.getElementById("v2-final-summary");
  try{const data=await readClientData(no,key);if(!unlocked||selectedClientNo!==no||activeKey!==key||v2Mode!==mode||v2VisitDate!==date||v2Step!==4)return;
  const a=v2Audit(data,date,mode),records=Array.isArray(data.v2Visits)?data.v2Visits:[],old=records.find(x=>x.date===date&&x.kind===mode),token=no+"/"+date+"/"+mode;
- out.textContent=a.checks.map(x=>(x[1]?"確認済み":"要確認")+"｜"+x[0]).concat(["機器測定判断："+a.measurement.length+"件（任意）","介入記録："+a.sessions.length+"件","介入後評価："+a.post.length+"件（任意）","セルフケア採否："+a.trials.length+"件","状態："+(old?.status==="complete"?"完了":old?"途中保存":"未完了")]).join("\n");
+ out.textContent=a.checks.map(x=>(x[1]?"確認済み":"要確認")+"｜"+x[0]).concat(["機器測定判断："+a.measurement.length+"件（"+(mode==="monthly"?"判断記録は必須・測定実施は任意":"任意")+"）","介入記録："+a.sessions.length+"件","介入後評価："+a.post.length+"件（任意）","セルフケア採否："+a.trials.length+"件","状態："+(old?.status==="complete"?"完了":old?"途中保存":"未完了")]).join("\n");
  if(v2FinalLoaded!==token){v2FinalLoaded=token;document.getElementById("v2-final-care").value=old?.care||"";document.getElementById("v2-final-intervention").value=old?.intervention||"";document.getElementById("v2-final-note").value=old?.note||"";}
  document.getElementById("v2-final-history").textContent=records.slice().reverse().map(x=>x.date+"｜"+(visitKinds[x.kind]||x.kind)+"｜"+(x.status==="complete"?"完了":"途中保存")+"\n申し送り："+(x.note||"なし")).join("\n\n")||"記録なし";
  }catch(e){out.textContent="読み込み失敗："+e.message;}
