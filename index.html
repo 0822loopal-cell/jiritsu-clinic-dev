@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.28｜医療対応判定と来院完了判定の整合修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.29｜任意項目表示と旧形式共有データ案内の整合修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -1789,7 +1789,7 @@ document.getElementById("weekly-period-select").onchange=e=>{
 function renderWeeklyCharts(data){
  const root=document.getElementById("weekly-chart-content");root.replaceChildren();
  const share=weeklyActiveShare(data);
- if(!share){root.textContent="日別データ付きの週間共有記録がありません。";return;}
+ if(!share){root.textContent=(Array.isArray(data.weeklyShares)&&data.weeklyShares.length)?"日別グラフに対応する共有データがありません。旧形式の7日間サマリーは保存・週別集計の参照対象ですが、日別グラフには表示できません。":"日別データ付きの週間共有記録がありません。";return;}
  const days=inspectWeeklyDailyPayload(share.raw,share.period).days;
  const header=document.createElement("p");header.textContent=(share.week||"集計週未記載")+"｜"+share.period;root.append(header);
  const allSeries=[["dizziness","めまい","#176e99","vertigo"],["unsteadiness","ふらつき","#bc623d","balance"],["tinnitus","耳鳴り","#7a54aa","tinnitus"],["dailyImpact","日常生活への影響","#269477",null]];
@@ -1814,7 +1814,7 @@ function renderWeeklyCharts(data){
 function renderWeeklyCamera(data){
  const root=document.getElementById("weekly-camera-content");root.replaceChildren();
  const share=weeklyActiveShare(data);
- if(!share){root.textContent="日別データ付きの週間共有記録がありません。";return;}
+ if(!share){root.textContent=(Array.isArray(data.weeklyShares)&&data.weeklyShares.length)?"日別グラフに対応する共有データがありません。旧形式の7日間サマリーは保存・週別集計の参照対象ですが、日別グラフには表示できません。":"日別データ付きの週間共有記録がありません。";return;}
  const days=inspectWeeklyDailyPayload(share.raw,share.period).days;
  const h=document.createElement("p");h.textContent=(share.week||"集計週未記載")+"｜"+share.period;root.append(h);
  const ns="http://www.w3.org/2000/svg";
@@ -2351,7 +2351,7 @@ function v2RefreshSubStatus(data){
  document.getElementById("v2-substatus").textContent=v2SubStatusCache[v2Step];
  const hasSessionField=fields=>daySessions.some(r=>fields.some(f=>String(r.values?.[f]||"").trim()!==""));
  const done=v2Step===1?[count[0]>0,count[1]>0,count[2]>0]:[support>0,hasSessionField(["visitState","sinceLast"]),hasSessionField(["priority","interventions","response","reevaluation"]),post>0,hasSessionField(["selfcare","next"])];
- for(const [i,b] of Array.from(document.getElementById("v2-subtabs").children).entries())b.dataset.saved=String(done[i]||false);
+ for(const [i,b] of Array.from(document.getElementById("v2-subtabs").children).entries()){const optional=(v2Step===1&&i===2)||(v2Step===2&&i===3);b.dataset.saved=String(done[i]||false);b.textContent=(i+1)+" "+v2SubItems[v2Step][i].label+(optional&&!done[i]?"（任意・記録なし）":"");}
 }
 function v2SubRender(){
  const items=v2SubItems[v2Step],nav=document.getElementById("v2-subnav"),tabs=document.getElementById("v2-subtabs");
