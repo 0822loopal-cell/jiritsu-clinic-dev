@@ -1904,6 +1904,8 @@ function v2InitialBlockReason(data,date){
  if(completed)return "このクライアントの初回は完了済みです。2回目の初回登録はできません。継続または定期再評価を選択してください。";
  const previous=(Array.isArray(data.visits)?data.visits:[]).find(x=>x.kind==="initial"&&x.date!==date);
  if(previous)return "初回来院（"+previous.date+"）が既に登録されています。新しい初回を作らず、既存の初回記録を確認してください。";
+ const sameDayOtherMode=(Array.isArray(data.visits)?data.visits:[]).some(x=>x.kind==="initial"&&x.date===date&&x.mode!==document.getElementById("visit-mode").value);
+ if(sameDayOtherMode)return "この日付には別の提供形態で初回来院が登録済みです。初回を重複登録できません。";
  return "";
 }
 async function v2RefreshInitialLock(no){
