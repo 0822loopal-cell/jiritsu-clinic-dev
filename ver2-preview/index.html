@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.34｜旧工程ボタンの誤遷移を防止</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.35｜完了後の施術記録表示を同期</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2527,7 +2527,7 @@ async function v2SaveFinal(complete){
  if(!unlocked||activeKey!==key||selectedClientNo!==no||v2Mode!==mode||v2VisitDate!==date)return;
  await new Promise((resolve,reject)=>{const tx=db.transaction(CLIENT_STORE,"readwrite");tx.objectStore(CLIENT_STORE).put({iv:b64(iv),ciphertext:b64(new Uint8Array(cipher))},no);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
  if(!unlocked||activeKey!==key||selectedClientNo!==no)return;
- await loadLifeGoal(no);await loadVisitTimeline(no);await v2LoadFinal();status.textContent=complete?"来院の総括と完了状態を暗号化保存しました。":"総括を暗号化して途中保存しました。";
+ await loadLifeGoal(no);await loadVisitTimeline(no);await loadSessions(no);await v2LoadFinal();status.textContent=complete?"来院の総括と完了状態を暗号化保存しました。":"総括を暗号化して途中保存しました。";
  }catch(e){status.textContent="保存失敗："+e.message;}finally{feedback(button,false);}
 }
 document.getElementById("v2-final-refresh").onclick=v2LoadFinal;
