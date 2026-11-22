@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.29｜任意項目表示と旧形式共有データ案内の整合修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.30｜任意項目表示と旧形式共有データ案内の整合修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2091,7 +2091,7 @@ async function loadCategoryAssessments(no){
  document.getElementById("category-status").textContent=list.length+"件の評価履歴を読み込みました。";
  }catch(e){if(unlocked&&selectedClientNo===no)history.textContent="読み込み失敗："+e.message;}
 }
-document.getElementById("category-refresh").onclick=async()=>{if(selectedClientNo){await loadCategoryAssessments(selectedClientNo);if(v2Mode&&v2Step===1){const d=await readClientData(selectedClientNo,activeKey);v2ShowStep2Saved(d,v2VisitDate);}}};document.getElementById("intake-to-category").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("category-panel"):showInitialStage(2);document.getElementById("category-to-assessment").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("assessment-panel"):showInitialStage(3);
+document.getElementById("category-refresh").onclick=async()=>{if(selectedClientNo){await loadCategoryAssessments(selectedClientNo);if(v2Mode&&v2Step===1){const d=await readClientData(selectedClientNo,activeKey);v2ShowStep2Saved(d,v2VisitDate);}}};document.getElementById("intake-to-category").onclick=()=>document.getElementById("initial-workflow").hidden?showClientView("category-panel"):showInitialStage(2);document.getElementById("category-to-assessment").onclick=()=>{if(v2Mode&&v2Step===1){v2SelectSub(1);return;}document.getElementById("initial-workflow").hidden?showClientView("assessment-panel"):showInitialStage(3);};
 document.getElementById("category-save").onclick=async()=>{
  const no=selectedClientNo,key=activeKey;if(!unlocked||!no||!key)return;const status=document.getElementById("category-status"),button=document.getElementById("category-save"),date=document.getElementById("category-date").value,values={};for(const field of categoryFields)values[field]=document.getElementById("category-"+field).value.trim();
  if(!date||values.visitStatus===""||values.safety===""||values.alignment===""||!values.reason){status.textContent="評価日・受診状況・医療優先度・医療情報との整合性・判断理由を入力してください。";return;}
@@ -2339,7 +2339,7 @@ function v2SelectSub(i){
  document.getElementById("v2-sub-next").textContent=i===items.length-1?"次の工程へ":"次の項目";
  document.getElementById("v2-substatus").textContent=v2SubStatusCache[v2Step]||"各項目の保存状況を確認してください。";
  const stage=document.getElementById("v2-stage");const selectedStep=v2Step,selectedIndex=i;
- requestAnimationFrame(()=>{if(v2Step!==selectedStep||v2SubIndex!==selectedIndex)return;const nav=document.getElementById("v2-subnav");const sticky=window.getComputedStyle(nav).position==="sticky";const offset=sticky?nav.getBoundingClientRect().height+12:8;const top=stage.getBoundingClientRect().top+window.scrollY-offset;window.scrollTo({top:Math.max(0,top),behavior:"instant"});});
+ requestAnimationFrame(()=>{if(v2Step!==selectedStep||v2SubIndex!==selectedIndex)return;const nav=document.getElementById("v2-subnav");const top=stage.getBoundingClientRect().top+window.scrollY+8;window.scrollTo({top:Math.max(0,top),behavior:"instant"});});
 }
 function v2RefreshSubStatus(data){
  if(!v2SubItems[v2Step]||!v2VisitDate)return;
