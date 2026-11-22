@@ -78,7 +78,7 @@ button:disabled{cursor:not-allowed}
 </style>
 </head>
 <body>
-<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.27｜固定ナビ高さを考慮した工程切り替え位置修正</p></header>
+<header><h1>自律調整院｜施設管理アプリ</h1><p>Ver.2.0.0-dev.28｜医療対応判定と来院完了判定の整合修正</p></header>
 <main>
 <section id="lock-panel" class="lockpanel" aria-label="アプリロック" hidden>
 <h2 id="lock-title">アプリロック</h2>
@@ -2492,7 +2492,7 @@ function v2Audit(data,date,mode){
  const day=k=>(Array.isArray(data[k])?data[k]:[]).filter(a=>a.date===date);
  const visits=day("visits"),standard=day("assessments").filter(a=>a.values?.v2Kind==="standard"),post=day("assessments").filter(a=>a.values?.v2Kind==="post");
  const category=day("symptomCategoryAssessments"),measurement=day("measurementDecisions"),sessions=day("sessions"),plans=day("supportPlans"),trials=day("selfcareTrials"),reviews=day("monthlyReviews");
- const checks=[["来院登録",visits.length===1&&visits[0].kind===mode],["標準評価",standard.length===1&&v2ValidateStandard(standard[0].values).length===0],["医療対応・症状カテゴリー確認",!!category.at(-1)?.values?.safety&&!!category.at(-1)?.values?.alignment&&!!category.at(-1)?.values?.reason]];
+ const checks=[["来院登録",visits.length===1&&visits[0].kind===mode],["標準評価",standard.length===1&&v2ValidateStandard(standard[0].values).length===0],["医療対応・症状カテゴリー確認",category.at(-1)?.values?.safety==="0"&&!!category.at(-1)?.values?.alignment&&!!category.at(-1)?.values?.reason&&!!category.at(-1)?.flags&&Object.values(category.at(-1).flags).every(x=>x==="no")&&Object.keys(categoryFlagNames).every(k=>category.at(-1).flags[k]==="no")]];
  if(mode==="initial"){checks.push(["氏名・初回ヒアリング",!!data.profile?.name&&data.intake?.symptomsConfirmed===true],["生活目標",!!data.lifeGoal?.trim()],["初回支援方針・料金・承諾",plans.some(p=>p.consent==="accepted"&&Number(p.total)===4400&&p.details?.trim())]);}
  return {checks,standard,post,category,measurement,sessions,plans,trials,reviews,visits};
 }
